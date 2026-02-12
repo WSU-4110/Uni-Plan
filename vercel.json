@@ -1,0 +1,12 @@
+{
+  "buildCommand": "cd Frontend && pnpm install && pnpm build",
+  "outputDirectory": "Frontend/dist",
+  "devCommand": "cd Frontend && pnpm dev",
+  "installCommand": "pnpm install",
+  "framework": "vite",
+  "build": {
+    "env": {
+      "ENABLE_EXPERIMENTAL_COREPACK": "1"
+    }
+  }
+}

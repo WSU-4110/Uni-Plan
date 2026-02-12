@@ -1,0 +1,23 @@
+{
+  "name": "uni-plan",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Uni-Plan - University Planning Application",
+  "packageManager": "pnpm@9.4.0",
+  "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "build": "pnpm --filter frontend build",
+    "preview": "pnpm --filter frontend preview",
+    "install:all": "pnpm install"
+  },
+  "keywords": [
+    "university",
+    "planning",
+    "react",
+    "vite"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
