@@ -1,0 +1,112 @@
+#root {
+    margin: 0;
+    padding: 0;
+}
+body {
+    background-color: white;
+    
+}
+
+p {
+    color: black;
+}
+
+h1 {
+    color: white;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+h2 {
+    color: #0F3B2E;
+    padding: 27px 0px 0px 10px;
+}
+
+/* Green stripe across the top of the page */
+.top-header {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: 77px; /* adjust thickness */
+    background-color: #0F3B2E; /* green */
+    display: flex;
+    align-items: center;
+    padding-left: 20px; /* space for the logo */
+    z-index: 10;
+}
+
+.login-page {
+    position: relative;
+    min-height: 100vh;
+    background-color: white;
+    padding-top: 100px; /* space for the green stripe */
+}
+
+.header-logo {
+    height: 40px; /* adjust logo size */
+    width: auto; /* adjust logo size */
+}
+
+.input-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    color: black;
+}
+
+.input-group {
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 0 20px; /* horizontal padding for the input group */
+}
+
+.full-input {
+    width: 100%;
+    padding: 14px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+
+    background-color: #e6f2ff !important;
+    color: black;
+}
+
+.full-input:focus {
+    background-color: #e6f2ff !important;
+    outline: none;
+}
+
+p {
+    color: black;
+    padding: 14px;
+}
+
+.login-button {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* space between icon and text */
+    background-color: whitesmoke;
+    color: #1ab02b;
+    border: 1px solid darkgrey;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-weight: 649;
+    cursor: pointer;
+}
+
+.button-icon {
+    height: 20px; /* adjust icon size */
+    width: 20px; /* adjust icon size */
+}
+
+.label-row {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* space between icon and label */
+    margin-bottom: 6px;
+}
+
+.label-icon {
+    width: 10px; /* adjust icon size */
+    height: 10px; /* adjust icon size */
+}
