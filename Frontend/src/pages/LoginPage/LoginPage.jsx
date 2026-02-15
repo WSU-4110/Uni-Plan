@@ -1,6 +1,11 @@
 import { useState } from "react";
 import "./LoginPage.css";
 
+import WayneLogo from "../../WayneLogo.png";
+import person from "../..//person.png";
+import lock from "../../lock.png";
+import checkmark from "../../checkmark.png";
+
 function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -12,43 +17,62 @@ function Login() {
     };
 
     return (
-        <div style={{margin: "50px auto" }}>
-            <h1>Wayne State University</h1>
-            <h2>Academica Login</h2>
+        <div className="login-page">
+            <div className="top-header">
 
-            <p>You have reached a page that requires authentication,
-                please enter your Wayne State AccessID and password.</p>
+                <img src={WayneLogo} alt="Wayne State University Logo" className="header-logo" />
+                <h1 className="header-title">WAYNE STATE UNIVERSITY</h1>
+            </div>
 
-            <form onSubmit={handleSubmit}>
-                <p>Your Wayne State AccessID</p>
-                <input
-                    type="text"
-                    placeholder="AccessID"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                />
-                <br/>
+            <div className="login_content">
+                <h2>Academica Login</h2>
 
-                <p>Your Password</p>
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+                <p>You have reached a page that requires authentication,
+                    please enter your Username and password.</p>
 
-                <br/>
+                <form onSubmit={handleSubmit}>
+                    <div className="input-group">
+                        <div className="label-row">
+                            <img src={person} className="label-icon" alt="" />
+                            <label className="input-label">Your Username</label>
+                        </div>
 
-                <button type="submit">Login</button>
-            </form>
+                        <input
+                            type="text"
+                            placeholder="Username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="full-input"
+                        />
+                    </div>
 
-            <p>Forgot your AccessID or password?</p>
+                    <div className="input-group">
+                        <div className="label-row">
+                            <img src={lock} className="label-icon" alt="" />
+                            <label className="input-label">Your Password</label>
+                        </div>
 
-            <p>Don't have an AccessID or password?</p>
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="full-input"
+                        />
+                    </div>
 
-            <p>Need help with other WSU technologies?</p>
+                    <div className="input-group">
+                        <button type="submit" className="login-button">
+                            <img src={checkmark} className="button-icon" alt="" />
+                            Login
+                        </button>
 
-            <p>By using this service you agree to adhere to WSU computing policies and guidelines.</p>
+                    </div>
+
+                </form>
+
+                <p>By using this service you agree to adhere to WSU computing policies and guidelines.</p>
+            </div>
         </div>
     );
 }
