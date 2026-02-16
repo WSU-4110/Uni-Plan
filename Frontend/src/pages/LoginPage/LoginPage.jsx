@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./LoginPage.css";
 
 import WayneLogo from "../../WayneLogo.png";
-import person from "../..//person.png";
+import person from "../../../assets/person.png";
 import lock from "../../lock.png";
 import checkmark from "../../checkmark.png";
 
