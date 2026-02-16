@@ -15,6 +15,7 @@ p {
 h1 {
     color: white;
     font-family: 'Times New Roman', Times, serif;
+    font-size: clamp(14px, 2.5vw, 20px); /* scales from 14px to 20px */
 }
 
 h2 {
