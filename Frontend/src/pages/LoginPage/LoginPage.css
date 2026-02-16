@@ -43,8 +43,8 @@ h2 {
 }
 
 .header-logo {
-    height: 40px; /* adjust logo size */
-    width: auto; /* adjust logo size */
+    height: clamp(30px, 5vw, 40px); /* scales between 30px and 40px */
+    width: auto;
 }
 
 .input-label {
