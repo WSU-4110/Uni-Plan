@@ -1,10 +1,10 @@
 import { useState } from "react";
 import "./LoginPage.css";
 
-import WayneLogo from "../../WayneLogo.png";
-import person from "../../../assets/person.png";
-import lock from "../../lock.png";
-import checkmark from "../../checkmark.png";
+import wayneLogo from "../../assets/images/wayneLogo.png";
+import person from "../../assets/images/person.png";
+import lock from "../../assets/images/lock.png";
+import checkmark from "../../assets/images/checkmark.png";
 
 function Login() {
     const [username, setUsername] = useState("");
@@ -20,7 +20,7 @@ function Login() {
         <div className="login-page">
             <div className="top-header">
 
-                <img src={WayneLogo} alt="Wayne State University Logo" className="header-logo" />
+                <img src={wayneLogo} alt="Wayne State University Logo" className="header-logo" />
                 <h1 className="header-title">WAYNE STATE UNIVERSITY</h1>
             </div>
 
