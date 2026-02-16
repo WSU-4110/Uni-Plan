@@ -33,7 +33,7 @@ function Login() {
                 <form onSubmit={handleSubmit}>
                     <div className="input-group">
                         <div className="label-row">
-                            <img src={person} className="label-icon" alt="" />
+                            <img src={person} className="label-icon" alt="User icon" />
                             <label className="input-label">Your Username</label>
                         </div>
 
