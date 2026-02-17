@@ -1,12 +1,12 @@
 import { useState } from "react";
 import "./LoginPage.css";
 
-import WayneLogo from "../../WayneLogo.png";
-import person from "../..//person.png";
-import lock from "../../lock.png";
-import checkmark from "../../checkmark.png";
+import wayneLogo from "../../assets/images/wayneLogo.png";
+import person from "../../assets/images/person.png";
+import lock from "../../assets/images/lock.png";
+import checkmark from "../../assets/images/checkmark.png";
 
-function Login() {
+function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
 
@@ -20,11 +20,11 @@ function Login() {
         <div className="login-page">
             <div className="top-header">
 
-                <img src={WayneLogo} alt="Wayne State University Logo" className="header-logo" />
+                <img src={wayneLogo} alt="Wayne State University Logo" className="header-logo" />
                 <h1 className="header-title">WAYNE STATE UNIVERSITY</h1>
             </div>
 
-            <div className="login_content">
+            <div className="login-content">
                 <h2>Academica Login</h2>
 
                 <p>You have reached a page that requires authentication,
@@ -33,7 +33,7 @@ function Login() {
                 <form onSubmit={handleSubmit}>
                     <div className="input-group">
                         <div className="label-row">
-                            <img src={person} className="label-icon" alt="" />
+                            <img src={person} className="label-icon" alt="User icon" />
                             <label className="input-label">Your Username</label>
                         </div>
 
@@ -48,7 +48,7 @@ function Login() {
 
                     <div className="input-group">
                         <div className="label-row">
-                            <img src={lock} className="label-icon" alt="" />
+                            <img src={lock} className="label-icon" alt="Lock icon" />
                             <label className="input-label">Your Password</label>
                         </div>
 
@@ -63,7 +63,7 @@ function Login() {
 
                     <div className="input-group">
                         <button type="submit" className="login-button">
-                            <img src={checkmark} className="button-icon" alt="" />
+                            <img src={checkmark} className="button-icon" alt="Checkmark icon" />
                             Login
                         </button>
 
@@ -77,4 +77,4 @@ function Login() {
     );
 }
 
-export default Login;
+export default LoginPage;
