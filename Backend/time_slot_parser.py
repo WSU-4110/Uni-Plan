@@ -12,7 +12,7 @@ import psycopg2
 # what to change to run locally
 
 localuser = "kimnahyun"      # change to your user
-localpassword = "pw"    # change to your password
+localpassword = "5178"    # change to your password
 
 
 
@@ -36,21 +36,21 @@ try:
     for (data,) in raw_cursor:
         print(type(data))  # <class 'dict'>  this line also helpful for seeing how deep into database before error
 
-        faculty_list = data.get("faculty", [])
-        if faculty_list:
-            instructor = faculty_list[0].get("displayName")             # instructor name is stored in a list of dicts, this if else just finds it
-        else:
-            instructor = None
-            
         meetingsFaculty_list = data.get("meetingsFaculty", [])
         if meetingsFaculty_list:
-            meeting_time = meetingsFaculty_list[0].get("meetingTime", {})       # same concept as above
-            building = meeting_time.get("building")
-            room_number = meeting_time.get("room")
+            meeting_time = meetingsFaculty_list[0].get("meetingTime", {})   
+            meeting_start = meeting_time.get("beginTime")   
+            meeting_end = meeting_time.get("endTime")
+            monday = meeting_time.get("monday")
+            tuesday = meeting_time.get("tuesday")
+            wednesday = meeting_time.get("wednesday")
+            thursday = meeting_time.get("thursday")
+            friday = meeting_time.get("friday")
+            saturday = meeting_time.get("saturday")
+            sunday = meeting_time.get("sunday")
         else:
             building = None
             room_number = None
-        
 
 
         # so what is happening below is: 
@@ -60,10 +60,10 @@ try:
         # queries are run
 
 
-        course_sql = """
-        INSERT INTO course
-        (id, subject, course_number, title, credit_hours, sec_id, instructor, building, room_number)        
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+        time_slot_sql = """
+        INSERT INTO time_slot
+        (id, start_min, end_min, monday, tuesday, wednesday, thursday, friday, saturday, sunday)        
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
 
         section_sql = """
@@ -72,29 +72,22 @@ try:
         VALUES (%s, %s, %s, %s);
         """
 
-        course_vals = (
+        time_slot_vals = (
             data.get("id"),
-            data.get("subject"),
-            data.get("courseNumber"),
-            data.get("courseTitle"),
-            data.get("creditHours"),
-            data.get("sequenceNumber"),
-            instructor,
-            building,
-            room_number,
-        )
-
-        section_vals = (
-            data.get("courseReferenceNumber"),
-            data.get("id"),
-            data.get("term"),
-            data.get("maximumEnrollment"),
+            meeting_start,
+            meeting_end,
+            monday,
+            tuesday,
+            wednesday,
+            thursday,
+            friday,
+            saturday,
+            sunday
         )
 
         # execute command for each iteration, DOES NOT SAVE CHANGES
 
-        proto_cursor.execute(course_sql, course_vals)
-        proto_cursor.execute(section_sql, section_vals)
+        proto_cursor.execute(time_slot_sql, time_slot_vals)
 
         
         
