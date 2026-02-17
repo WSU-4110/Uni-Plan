@@ -1,7 +1,7 @@
-import Login from "./pages/LoginPage/LoginPage";
+import CourseSearch from "./pages/CourseSearch/CourseSearch";
 
 function App() {
-  return <Login />;
+  return <CourseSearch />;
 }
 
 export default App;
