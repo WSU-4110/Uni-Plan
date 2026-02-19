@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 
 import wayneLogo from "../../assets/images/wayneLogo.png";
@@ -6,14 +7,22 @@ import person from "../../assets/images/person.png";
 import lock from "../../assets/images/lock.png";
 import checkmark from "../../assets/images/checkmark.png";
 
+function authenticateLogin(username, password) {
+    return username === "validUsername" && password === "validPassword";
+}
+
 function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const navigate = useNavigate();
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        console.log("Username: ", username);
-        console.log("Password: ", password);
+        if (authenticateLogin(username, password)) {
+            navigate("/courses", { replace: true });
+        } else {
+            console.log("Login failed");
+        }
     };
 
     return (
