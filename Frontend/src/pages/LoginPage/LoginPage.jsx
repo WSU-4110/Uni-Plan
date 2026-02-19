@@ -19,7 +19,7 @@ function LoginPage() {
     const handleSubmit = (event) => {
         event.preventDefault();
         if (authenticateLogin(username, password)) {
-            navigate("/courses", { replace: true });
+            navigate("/home", { replace: true });
         } else {
             console.log("Login failed");
         }
