@@ -55,3 +55,5 @@ pip-delete-this-directory.txt
 # Database
 *.sqlite3
 *.db
+
+product-document/
