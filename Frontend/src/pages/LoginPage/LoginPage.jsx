@@ -25,7 +25,7 @@ function LoginPage() {
     };
 
     return (
-        <div className="relative min-h-screen bg-white pt-[100px]">
+        <div className="relative min-h-screen bg-white">
             <div className="sticky top-0 w-full h-[77px] bg-[#0F3B2E] flex items-center px-[5%] z-10 gap-3">
                 <img
                     src={wayneLogo}
