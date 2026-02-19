@@ -4,9 +4,11 @@
   "devCommand": "cd Frontend && pnpm dev",
   "installCommand": "pnpm install",
   "framework": "vite",
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
   "build": {
     "env": {
-      "ENABLE_EXPERIMENTAL_COREPACK": "1"
+      "ENABLE_EXPERIMENTAL_COREPACK": "1",
+      "NODE_VERSION": "20.19.0"
     }
   }
 }
