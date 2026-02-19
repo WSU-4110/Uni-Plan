@@ -1,13 +1,13 @@
-from fastapi import FastAPI, HTTPException
+=from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 app = FastAPI()
 
-# Allow frontend to connect
+# Allow frontend to connect (development safe)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development only
+    allow_origins=["*"],  # change later to frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,29 +29,31 @@ class LoginRequest(BaseModel):
 
 
 # LOGIN
-@app.post("/login")
+@app.post("/api/login")
 def login(data: LoginRequest):
-    user = next(
-        (u for u in users if u["username"] == data.username and u["password"] == data.password),
-        None
-    )
+    for user in users:
+        if user["username"] == data.username and user["password"] == data.password:
+            return {
+                "success": True,
+                "message": "Login successful"
+            }
 
-    if user:
-        return {
-            "success": True,
-            "message": "Login successful"
-        }
-    else:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid username or password"
-        )
+    return {
+        "success": False,
+        "message": "Invalid username or password"
+    }
 
 
 # LOGOUT
-@app.post("/logout")
+@app.post("/api/logout")
 def logout():
     return {
         "success": True,
         "message": "Logged out successfully"
     }
+
+
+# Root route (so you don't see "Not Found")
+@app.get("/")
+def root():
+    return {"message": "FastAPI backend is running"}
