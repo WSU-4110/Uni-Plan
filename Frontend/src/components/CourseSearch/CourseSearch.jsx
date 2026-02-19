@@ -10,8 +10,8 @@ const MOCK_COURSES = [
 ];
 
 const SORT_OPTIONS = [
-  { value: "courseCode", label: "Course code" },
-  { value: "meetingTime", label: "Meeting time" },
+  { value: "courseCode", label: "Course Code" },
+  { value: "meetingTime", label: "Meeting Time" },
   { value: "relevance", label: "Relevance" },
 ];
 
@@ -35,13 +35,14 @@ export default function CourseSearch() {
   const [sortBy, setSortBy] = useState("courseCode");
   const [sortOrder, setSortOrder] = useState("asc");
 
-  // Filter state
   const [filterDays, setFilterDays] = useState([]);
   const [filterCredits, setFilterCredits] = useState("");
   const [filterInstructor, setFilterInstructor] = useState("");
 
-  const handleSearch = () => {
-    setHasSearched(true);
+  const handleSearch = () => setHasSearched(true);
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") handleSearch();
   };
 
   const toggleDay = (day) => {
@@ -56,19 +57,15 @@ export default function CourseSearch() {
     setFilterInstructor("");
   };
 
-  // Active filter labels for display
   const activeFilters = [
     ...filterDays.map((d) => `Day: ${d}`),
     filterCredits ? `Credits: ${filterCredits}` : null,
     filterInstructor ? `Instructor: ${filterInstructor}` : null,
   ].filter(Boolean);
 
-  // Apply search + filters reactively
   const filteredResults = useMemo(() => {
     if (!hasSearched) return [];
-
     const text = searchText.trim().toLowerCase();
-
     return MOCK_COURSES.filter((course) => {
       const matchesText =
         !text ||
@@ -76,21 +73,15 @@ export default function CourseSearch() {
         course.crn.includes(text) ||
         course.subject.toLowerCase().includes(text) ||
         course.keyword.toLowerCase().includes(text);
-
       const matchesTerm = term ? course.term === term : true;
-
-      // Check if course meets on ALL selected days
       const matchesDays =
         filterDays.length === 0 ||
         filterDays.every((d) => course.meetingDays.includes(d));
-
       const matchesCredits =
         filterCredits === "" || course.credits === Number(filterCredits);
-
       const matchesInstructor =
         filterInstructor === "" ||
         course.instructor.toLowerCase().includes(filterInstructor.toLowerCase());
-
       return matchesText && matchesTerm && matchesDays && matchesCredits && matchesInstructor;
     });
   }, [hasSearched, searchText, term, filterDays, filterCredits, filterInstructor]);
@@ -101,90 +92,124 @@ export default function CourseSearch() {
   );
 
   return (
-    <div style={{ padding: "20px" }}>
-      {/* Search bar */}
-      <label htmlFor="term-select">Select Semester</label>
-      <select
-        id="term-select"
-        value={term}
-        onChange={(e) => setTerm(e.target.value)}
-        aria-label="Select term"
-      >
-        <option value="">Select a term</option>
-        <option value="Spring/Summer 2026">Spring/Summer 2026</option>
-        <option value="Fall 2026">Fall 2026</option>
-      </select>
-      <br /><br />
-      <input
-        type="text"
-        placeholder="Course Name, CRN, Subject, or Keyword"
-        value={searchText}
-        onChange={(e) => setSearchText(e.target.value)}
-        aria-label="Search courses"
-      />
-      <button onClick={handleSearch}>Search</button>
+    <div className="max-w-4xl mx-auto flex flex-col gap-4">
 
-      {/* Filter panel — shown after first search */}
-      {hasSearched && (
-        <div style={{ marginTop: "16px", padding: "12px", border: "1px solid #ccc", borderRadius: "6px", backgroundColor: "#f9f9f9" }}>
-          <strong>Filters</strong>
+      {/* Search card */}
+      <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-4 sm:p-6">
+        <h2 className="text-base font-semibold text-[#1e293b] mb-4">Search Courses</h2>
 
-          {/* Meeting days */}
-          <div style={{ marginTop: "8px" }}>
-            <label>Meeting Days:</label>
-            <span style={{ marginLeft: "8px" }}>
-              {ALL_DAYS.map((day) => (
-                <label key={day} style={{ marginRight: "10px" }}>
-                  <input
-                    type="checkbox"
-                    checked={filterDays.includes(day)}
-                    onChange={() => toggleDay(day)}
-                    style={{ marginRight: "3px" }}
-                  />
-                  {day}
-                </label>
-              ))}
-            </span>
-          </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <select
+            id="term-select"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            aria-label="Select term"
+            className="sm:w-52 px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+          >
+            <option value="">All Semesters</option>
+            <option value="Spring/Summer 2026">Spring/Summer 2026</option>
+            <option value="Fall 2026">Fall 2026</option>
+          </select>
 
-          {/* Credit hours */}
-          <div style={{ marginTop: "8px" }}>
-            <label htmlFor="credits-select">Credits: </label>
-            <select
-              id="credits-select"
-              value={filterCredits}
-              onChange={(e) => setFilterCredits(e.target.value)}
-              aria-label="Filter by credits"
-            >
-              <option value="">Any</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-            </select>
-          </div>
-
-          {/* Instructor */}
-          <div style={{ marginTop: "8px" }}>
-            <label htmlFor="instructor-input">Instructor: </label>
+          <div className="flex flex-1 gap-2">
             <input
-              id="instructor-input"
               type="text"
-              placeholder="Instructor name"
-              value={filterInstructor}
-              onChange={(e) => setFilterInstructor(e.target.value)}
-              aria-label="Filter by instructor"
+              placeholder="Course name, CRN, subject, or keyword"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              aria-label="Search courses"
+              className="flex-1 px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
             />
+            <button
+              onClick={handleSearch}
+              className="px-4 py-2 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-medium rounded-md transition whitespace-nowrap"
+            >
+              Search
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter panel */}
+      {hasSearched && (
+        <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-4 sm:p-6">
+          <h3 className="text-sm font-semibold text-[#1e293b] mb-4">Filters</h3>
+
+          <div className="flex flex-col sm:flex-row flex-wrap gap-4">
+            {/* Meeting days */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
+                Meeting Days
+              </label>
+              <div className="flex gap-1 flex-wrap">
+                {ALL_DAYS.map((day) => (
+                  <button
+                    key={day}
+                    onClick={() => toggleDay(day)}
+                    className={`w-8 h-8 text-sm font-medium rounded-md border transition ${
+                      filterDays.includes(day)
+                        ? "bg-[#0F3B2E] text-white border-[#0F3B2E]"
+                        : "bg-white text-[#475569] border-[#e2e8f0] hover:border-[#0F3B2E]"
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Credits */}
+            <div className="flex flex-col gap-2">
+              <label htmlFor="credits-select" className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
+                Credits
+              </label>
+              <select
+                id="credits-select"
+                value={filterCredits}
+                onChange={(e) => setFilterCredits(e.target.value)}
+                aria-label="Filter by credits"
+                className="px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+              >
+                <option value="">Any</option>
+                <option value="3">3 credits</option>
+                <option value="4">4 credits</option>
+              </select>
+            </div>
+
+            {/* Instructor */}
+            <div className="flex flex-col gap-2 flex-1 min-w-[160px]">
+              <label htmlFor="instructor-input" className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
+                Instructor
+              </label>
+              <input
+                id="instructor-input"
+                type="text"
+                placeholder="Instructor name"
+                value={filterInstructor}
+                onChange={(e) => setFilterInstructor(e.target.value)}
+                aria-label="Filter by instructor"
+                className="px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+              />
+            </div>
           </div>
 
           {/* Active filter chips */}
           {activeFilters.length > 0 && (
-            <div style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
-              <span style={{ fontSize: "13px", color: "#555" }}>Active:</span>
+            <div className="mt-4 flex flex-wrap gap-2 items-center">
+              <span className="text-xs text-[#64748b]">Active:</span>
               {activeFilters.map((f) => (
-                <span key={f} style={{ background: "#0F3B2E", color: "white", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>
+                <span
+                  key={f}
+                  className="px-2.5 py-0.5 bg-[#0F3B2E] text-white text-xs rounded-full"
+                >
                   {f}
                 </span>
               ))}
-              <button onClick={clearFilters} style={{ fontSize: "12px", marginLeft: "4px", cursor: "pointer" }}>
+              <button
+                onClick={clearFilters}
+                className="ml-1 text-xs text-[#475569] hover:text-[#0F3B2E] underline transition"
+              >
                 Clear all
               </button>
             </div>
@@ -194,16 +219,21 @@ export default function CourseSearch() {
 
       {/* Results */}
       {hasSearched && (
-        <div style={{ marginTop: "20px" }}>
-          {sortedResults.length > 0 ? (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
-                <label htmlFor="sort-select">Sort by</label>
+        <div className="flex flex-col gap-3">
+          {/* Sort controls + count */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <p className="text-sm text-[#64748b]">
+              {sortedResults.length} course{sortedResults.length !== 1 ? "s" : ""} found
+            </p>
+            {sortedResults.length > 0 && (
+              <div className="flex items-center gap-2">
+                <label htmlFor="sort-select" className="text-xs text-[#64748b]">Sort by</label>
                 <select
                   id="sort-select"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   aria-label="Sort results by"
+                  className="px-2 py-1.5 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] transition"
                 >
                   {SORT_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -213,22 +243,53 @@ export default function CourseSearch() {
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value)}
                   aria-label="Sort order"
+                  className="px-2 py-1.5 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] transition"
                 >
-                  <option value="asc">Ascending</option>
-                  <option value="desc">Descending</option>
+                  <option value="asc">Asc</option>
+                  <option value="desc">Desc</option>
                 </select>
               </div>
-              <ul>
-                {sortedResults.map((course, index) => (
-                  <li key={course.crn + index}>
-                    <strong>{course.name}</strong> — {course.courseCode} — CRN: {course.crn} — {course.meetingDays} {course.meetingTime} — {course.credits} cr — {course.instructor}
-                  </li>
-                ))}
-              </ul>
-            </>
+            )}
+          </div>
+
+          {sortedResults.length > 0 ? (
+            <ul className="flex flex-col gap-3">
+              {sortedResults.map((course, index) => (
+                <li
+                  key={course.crn + index}
+                  className="bg-white border border-[#e2e8f0] rounded-lg p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 hover:shadow-md hover:border-[#cbd5e1] transition"
+                >
+                  {/* Course info */}
+                  <div className="flex flex-col gap-2 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold text-[#0F3B2E] bg-[#d1fae5] px-2 py-0.5 rounded">
+                        {course.courseCode}
+                      </span>
+                      <span className="text-xs text-[#64748b]">CRN: {course.crn}</span>
+                      <span className="text-xs text-[#64748b]">{course.term}</span>
+                    </div>
+                    <p className="text-base font-semibold text-[#1e293b]">{course.name}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      <span className="text-sm text-[#475569]">📅 {course.meetingDays} · {course.meetingTime}</span>
+                      <span className="text-sm text-[#475569]">🎓 {course.credits} credits</span>
+                      <span className="text-sm text-[#475569]">👤 {course.instructor}</span>
+                    </div>
+                  </div>
+
+                  {/* Add button */}
+                  <div className="flex-shrink-0">
+                    <button className="px-4 py-1.5 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-medium rounded-md transition">
+                      Add
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           ) : (
-            // No results message with suggestion to adjust filters
-            <p>No courses found. Try adjusting your search or clearing filters.</p>
+            <div className="bg-white border border-[#e2e8f0] rounded-lg p-12 flex flex-col items-center justify-center text-center text-[#64748b]">
+              <p className="text-base font-medium">No courses found</p>
+              <p className="text-sm mt-1">Try adjusting your search or clearing the filters.</p>
+            </div>
           )}
         </div>
       )}
