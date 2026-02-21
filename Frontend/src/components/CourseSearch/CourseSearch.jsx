@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import ErrorMessage from "../ErrorMessage/ErrorMessage";
+
 
 const MOCK_COURSES = [
   { name: "Intro to Computer Science", crn: "12345", subject: "CS", keyword: "programming", term: "Spring/Summer 2026", courseCode: "CS 1010", meetingDays: "MW", meetingTime: "10:00 AM", credits: 3, instructor: "Dr. Smith", relevance: 85 },
@@ -39,6 +41,9 @@ export default function CourseSearch() {
   const [filterCredits, setFilterCredits] = useState("");
   const [filterInstructor, setFilterInstructor] = useState("");
 
+  const [totalCredits, setTotalCredits] = useState(0);
+  const [errorMessage, setErrorMessage] = useState("");
+
   const handleSearch = () => setHasSearched(true);
 
   const handleKeyDown = (e) => {
@@ -50,6 +55,25 @@ export default function CourseSearch() {
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     );
   };
+
+  const showError = (message) => {
+    setErrorMessage(message);
+  }
+
+  {/*produce error when user tries to add more than 18 credits */}
+  const handleAddCourse = (course) => {
+    if (totalCredits + course.credits > 18) {
+      showError("Error: Cannot exceed 18 credits.");
+      return;
+    }
+    setTotalCredits(prev => prev + course.credits);
+  };
+
+  {/* produce error when co-requisite required */}
+
+  {/* produce error when pre-requisite required */}
+
+  {/* produce error when waitlist, possibly course,is full */}
 
   const clearFilters = () => {
     setFilterDays([]);
@@ -93,6 +117,9 @@ export default function CourseSearch() {
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-4">
+
+      {/* Error popup test */}
+      <ErrorMessage />
 
       {/* Search card */}
       <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-4 sm:p-6">
