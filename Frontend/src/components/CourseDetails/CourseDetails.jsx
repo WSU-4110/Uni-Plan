@@ -30,7 +30,7 @@ export default function CourseDetails({ course, onClose }) {
             <p className="mb-3"><strong>Instructor / Meeting Times:</strong><br />
                 Instructor: {course.instructor}<br />
                 {course.meetingDays} {course.meetingTime}<br />
-                {course.building} | Room {course.room}
+                 Main Campus | {course.building} | Room {course.room}
             </p>
 
             <p className="mb-1"><strong>Corequisites:</strong> {course.corequisites}</p>
