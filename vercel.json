@@ -1,14 +1,25 @@
 {
-  "buildCommand": "cd Frontend && pnpm install && pnpm build",
-  "outputDirectory": "Frontend/dist",
-  "devCommand": "cd Frontend && pnpm dev",
-  "installCommand": "pnpm install",
-  "framework": "vite",
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
-  "build": {
-    "env": {
-      "ENABLE_EXPERIMENTAL_COREPACK": "1",
-      "NODE_VERSION": "20.19.0"
+  "builds": [
+    {
+      "src": "Backend/main.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "Frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
-  }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "Backend/main.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "Frontend/dist/$1"
+    }
+  ]
 }
