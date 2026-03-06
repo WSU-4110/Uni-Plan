@@ -1,70 +1,68 @@
 import psycopg2
 
 
-def get_connection():
-    return psycopg2.connect(
-        host="localhost",
-        database="your_db",
-        user="your_user",
-        password="your_password"
-    )
+class QueryBuilder:
 
+    def __init__(self):
+        self.base_query = "SELECT course.* FROM course"
+        self.joins = []
+        self.conditions = []
+        self.params = []
 
-def search_courses(
-    credits=None,
-    crn=None,
-    course_number=None,
-    class_name=None,
-    subject=None
-):
+    def filter_crn(self, crn):
+        self.joins.append("JOIN section ON course.id = section.course_id")
+        self.conditions.append("section.crn = %s")
+        self.params.append(crn)
+        return self
 
-    base_query = """
-        SELECT course.*
-        FROM course
-    """
+    def filter_credits(self, credits):
+        self.conditions.append("course.credit_hours = %s")
+        self.params.append(credits)
+        return self
 
-    joins = []
-    conditions = []
-    params = []
+    def filter_course_number(self, course_number):
+        self.conditions.append("course.course_number = %s")
+        self.params.append(course_number)
+        return self
 
-    if crn is not None:
-        joins.append("JOIN section ON course.id = section.course_id")
-        conditions.append("section.crn = %s")
-        params.append(crn)
+    def filter_class_name(self, class_name):
+        self.conditions.append("course.title ILIKE %s")
+        self.params.append(f"%{class_name}%")
+        return self
 
-    if credits is not None:
-        conditions.append("course.credit_hours = %s")
-        params.append(credits)
+    def filter_subject(self, subject):
+        self.conditions.append("course.subject = %s")
+        self.params.append(subject)
+        return self
 
-    if course_number is not None:
-        conditions.append("course.course_number = %s")
-        params.append(course_number)
+    def build(self):
+        query = self.base_query
 
-    if class_name is not None:
-        conditions.append("course.title ILIKE %s")
-        params.append(f"%{class_name}%")
+        if self.joins:
+            query += " " + " ".join(self.joins)
 
-    if subject is not None:
-        conditions.append("course.subject = %s")
-        params.append(subject)
+        if self.conditions:
+            query += " WHERE " + " AND ".join(self.conditions)
 
-    query = base_query
+        return query, self.params
 
-    if joins:
-        query += " " + " ".join(joins)
+    def execute(self):
+        query, params = self.build()
 
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
+        conn = psycopg2.connect(
+            host="localhost",
+            database="your_db",
+            user="your_user",
+            password="your_password"
+        )
 
-    conn = get_connection()
-    cur = conn.cursor()
+        cur = conn.cursor()
+        cur.execute(query, params)
 
-    cur.execute(query, params)
+        columns = [desc[0] for desc in cur.description]
+        results = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-    columns = [desc[0] for desc in cur.description]
-    results = [dict(zip(columns, row)) for row in cur.fetchall()]
+        cur.close()
+        conn.close()
 
-    cur.close()
-    conn.close()
-
-    return results
+        return results
