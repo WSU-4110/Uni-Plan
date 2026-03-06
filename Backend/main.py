@@ -1,6 +1,7 @@
-=from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from QueryBuilder import search_courses
 
 app = FastAPI()
 
@@ -57,3 +58,20 @@ def logout():
 @app.get("/")
 def root():
     return {"message": "FastAPI backend is running"}
+
+
+@app.get("/courses")
+def get_courses(
+    credits: int | None = None,
+    crn: int | None = None,
+    course_number: int | None = None,
+    class_name: str | None = None,
+    subject: str | None = None
+):
+    return search_courses(
+        credits=credits,
+        crn=crn,
+        course_number=course_number,
+        class_name=class_name,
+        subject=subject
+    )
