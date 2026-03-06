@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import CourseDetails from "../CourseDetails/CourseDetails";
+import MySchedule from "../MySchedule/MySchedule";
+import WeeklySchedule from "../WeeklySchedule/WeeklySchedule";
 
 const MOCK_COURSES = [
   {
@@ -12,6 +14,7 @@ const MOCK_COURSES = [
     courseCode: "CSC 1010",
     meetingDays: "MW",
     meetingTime: "10:00 AM",
+    meetingEndTime: "10:50 AM",
     credits: 3,
     instructor: "Dr. Smith",
     relevance: 85,
@@ -32,6 +35,7 @@ const MOCK_COURSES = [
     courseCode: "CS 3100",
     meetingDays: "TR",
     meetingTime: "2:00 PM",
+    meetingEndTime: "3:15 PM",
     credits: 3,
     instructor: "Dr. Jones",
     relevance: 72,
@@ -51,6 +55,7 @@ const MOCK_COURSES = [
     courseCode: "MATH 1800",
     meetingDays: "MWF",
     meetingTime: "9:00 AM",
+    meetingEndTime: "9:50 AM",
     credits: 4,
     instructor: "Dr. Lee",
     relevance: 60,
@@ -70,6 +75,7 @@ const MOCK_COURSES = [
     courseCode: "ENG 1010",
     meetingDays: "TR",
     meetingTime: "11:00 AM",
+    meetingEndTime: "12:15 PM",
     credits: 3,
     instructor: "Dr. Brown",
     relevance: 55,
@@ -89,6 +95,7 @@ const MOCK_COURSES = [
     courseCode: "PHY 2010",
     meetingDays: "MWF",
     meetingTime: "1:00 PM",
+    meetingEndTime: "1:50 PM",
     credits: 4,
     instructor: "Dr. Smith",
     relevance: 68,
@@ -108,6 +115,7 @@ const MOCK_COURSES = [
     courseCode: "CS 5800",
     meetingDays: "MW",
     meetingTime: "3:00 PM",
+    meetingEndTime: "3:50 PM",
     credits: 3,
     instructor: "Dr. Jones",
     relevance: 90,
@@ -150,7 +158,12 @@ export default function CourseSearch() {
   const [filterCredits, setFilterCredits] = useState("");
   const [filterInstructor, setFilterInstructor] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [totalCredits, setTotalCredits] = useState(0);
+  const [registeredCourses, setRegisteredCourses] = useState([]);
+
+  const totalCredits = useMemo(
+    () => registeredCourses.reduce((sum, c) => sum + c.credits, 0),
+    [registeredCourses]
+  );
 
   const [selectedCourse, setSelectedCourse] = useState(null);
 
@@ -166,18 +179,22 @@ export default function CourseSearch() {
 
   const showError = (message) => setErrorMessage(message);
 
-  //error for exceeding 18 credits 
   const handleAddCourse = (course) => {
+    if (registeredCourses.some((c) => c.crn === course.crn)) return;
     if (totalCredits + course.credits > 18) {
       showError("Error: Cannot exceed 18 credits.");
       return;
     }
-    setTotalCredits((prev) => prev + course.credits);
+    setRegisteredCourses((prev) => [...prev, course]);
+  };
+
+  const handleRemoveCourse = (crn) => {
+    setRegisteredCourses((prev) => prev.filter((c) => c.crn !== crn));
   };
 
   //error for has a prerequisite that is not met
-  
-  //error for has a corequisite 
+
+  //error for has a corequisite
 
   //error for full waiting list/ course is full
 
@@ -229,7 +246,7 @@ export default function CourseSearch() {
   const sortedResults = useMemo(() => sortResults(results, sortBy, sortOrder), [results, sortBy, sortOrder]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <ErrorMessage message={errorMessage} onClose={() => setErrorMessage("")} />
 
       {selectedCourse && (
@@ -342,59 +359,83 @@ export default function CourseSearch() {
         </div>
       )}
 
-      {hasSearched && (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <p className="text-sm text-[#64748b]">{sortedResults.length} course{sortedResults.length !== 1 ? "s" : ""} found</p>
-            {sortedResults.length > 0 && (
-              <div className="flex items-center gap-2">
-                <label htmlFor="sort-select" className="text-xs text-[#64748b]">Sort by</label>
-                <select id="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort results by" className="px-2 py-1.5 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] transition">
-                  {SORT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-                <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} aria-label="Sort order" className="px-2 py-1.5 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] transition">
-                  <option value="asc">Asc</option>
-                  <option value="desc">Desc</option>
-                </select>
+      <div className="flex flex-col xl:flex-row gap-6">
+        {hasSearched && (
+          <div className="flex flex-col gap-3 flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <p className="text-sm text-[#64748b]">{sortedResults.length} course{sortedResults.length !== 1 ? "s" : ""} found</p>
+              {sortedResults.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <label htmlFor="sort-select" className="text-xs text-[#64748b]">Sort by</label>
+                  <select id="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort results by" className="px-2 py-1.5 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] transition">
+                    {SORT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} aria-label="Sort order" className="px-2 py-1.5 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] transition">
+                    <option value="asc">Asc</option>
+                    <option value="desc">Desc</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {sortedResults.length > 0 ? (
+              <ul className="flex flex-col gap-3">
+                {sortedResults.map((course) => (
+                  <li key={course.crn} className="bg-white border border-[#e2e8f0] rounded-lg p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 hover:shadow-md hover:border-[#cbd5e1] transition">
+                    <div className="flex flex-col gap-2 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-[#0F3B2E] bg-[#d1fae5] px-2 py-0.5 rounded">{course.courseCode}</span>
+                        <span className="text-xs text-[#64748b]">CRN: {course.crn}</span>
+                        <span className="text-xs text-[#64748b]">{course.term}</span>
+                      </div>
+
+                      <p onClick={() => openCourse(course)} className="text-base font-semibold text-[#1e293b] hover:underline underline-offset-4 cursor-pointer">{course.name}</p>
+
+                      <div className="flex flex-wrap gap-x-4 gap-y-1">
+                        <span className="text-sm text-[#475569]">📅 {course.meetingDays} · {course.meetingTime}</span>
+                        <span className="text-sm text-[#475569]">🎓 {course.credits} credits</span>
+                        <span className="text-sm text-[#475569]">👤 {course.instructor}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex-shrink-0">
+                      {registeredCourses.some((c) => c.crn === course.crn) ? (
+                        <button
+                          disabled
+                          className="px-4 py-1.5 bg-[#d1fae5] text-[#065f46] text-sm font-medium rounded-md cursor-default select-none"
+                        >
+                          ✓ Added
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAddCourse(course)}
+                          className="px-4 py-1.5 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-medium rounded-md transition"
+                        >
+                          Add
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="bg-white border border-[#e2e8f0] rounded-lg p-12 flex flex-col items-center justify-center text-center text-[#64748b]">
+                <p className="text-base font-medium">No courses found</p>
+                <p className="text-sm mt-1">Try adjusting your search or clearing the filters.</p>
               </div>
             )}
           </div>
+        )}
 
-          {sortedResults.length > 0 ? (
-            <ul className="flex flex-col gap-3">
-              {sortedResults.map((course, index) => (
-                <li key={course.crn} className="bg-white border border-[#e2e8f0] rounded-lg p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 hover:shadow-md hover:border-[#cbd5e1] transition">
-                  <div className="flex flex-col gap-2 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold text-[#0F3B2E] bg-[#d1fae5] px-2 py-0.5 rounded">{course.courseCode}</span>
-                      <span className="text-xs text-[#64748b]">CRN: {course.crn}</span>
-                      <span className="text-xs text-[#64748b]">{course.term}</span>
-                    </div>
-
-                    <p onClick={() => openCourse(course)} className="text-base font-semibold text-[#1e293b] hover:underline underline-offset-4 cursor-pointer">{course.name}</p>
-
-                    <div className="flex flex-wrap gap-x-4 gap-y-1">
-                      <span className="text-sm text-[#475569]">📅 {course.meetingDays} · {course.meetingTime}</span>
-                      <span className="text-sm text-[#475569]">🎓 {course.credits} credits</span>
-                      <span className="text-sm text-[#475569]">👤 {course.instructor}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex-shrink-0">
-                    <button onClick={() => handleAddCourse(course)} className="px-4 py-1.5 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-medium rounded-md transition">Add</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="bg-white border border-[#e2e8f0] rounded-lg p-12 flex flex-col items-center justify-center text-center text-[#64748b]">
-              <p className="text-base font-medium">No courses found</p>
-              <p className="text-sm mt-1">Try adjusting your search or clearing the filters.</p>
-            </div>
-          )}
+        <div className="xl:w-80 flex-shrink-0">
+          <MySchedule registeredCourses={registeredCourses} onRemove={handleRemoveCourse} />
         </div>
+      </div>
+
+      {registeredCourses.length > 0 && (
+        <WeeklySchedule registeredCourses={registeredCourses} />
       )}
     </div>
   );
