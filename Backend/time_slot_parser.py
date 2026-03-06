@@ -7,16 +7,46 @@ import psycopg2
 
 #current build works
 
-
-
 # what to change to run locally
 
 localuser = "kimnahyun"      # change to your user
-localpassword = "5178"    # change to your password
+localpassword = "1234"    # change to your password
 
+class TimeSlotStrategy:
+    def extract_time_slot(self, data):
+        pass
 
+class MeetingTimeStrategy(TimeSlotStrategy):
+    def extract_time_slot(self, data):
 
+        meetingsFaculty_list = data.get("meetingsFaculty", [])
 
+        if meetingsFaculty_list:
+            meeting_time = meetingsFaculty_list[0].get("meetingTime", {})
+
+            return {
+                "meeting_start": meeting_time.get("beginTime"),
+                "meeting_end": meeting_time.get("endTime"),
+                "monday": meeting_time.get("monday"),
+                "tuesday": meeting_time.get("tuesday"),
+                "wednesday": meeting_time.get("wednesday"),
+                "thursday": meeting_time.get("thursday"),
+                "friday": meeting_time.get("friday"),
+                "saturday": meeting_time.get("saturday"),
+                "sunday": meeting_time.get("sunday")
+            }
+
+        return {
+            "meeting_start": None,
+            "meeting_end": None,
+            "monday": None,
+            "tuesday": None,
+            "wednesday": None,
+            "thursday": None,
+            "friday": None,
+            "saturday": None,
+            "sunday": None
+        }
 
 try:
 
@@ -32,33 +62,13 @@ try:
 
     raw_cursor.execute("select raw from wsu_sections;")
 
+    time_slot_strategy = MeetingTimeStrategy()
+
         
     for (data,) in raw_cursor:
         print(type(data))  # <class 'dict'>  this line also helpful for seeing how deep into database before error
 
-        meetingsFaculty_list = data.get("meetingsFaculty", [])
-        if meetingsFaculty_list:
-            meeting_time = meetingsFaculty_list[0].get("meetingTime", {})   
-            meeting_start = meeting_time.get("beginTime")   
-            meeting_end = meeting_time.get("endTime")
-            monday = meeting_time.get("monday")
-            tuesday = meeting_time.get("tuesday")
-            wednesday = meeting_time.get("wednesday")
-            thursday = meeting_time.get("thursday")
-            friday = meeting_time.get("friday")
-            saturday = meeting_time.get("saturday")
-            sunday = meeting_time.get("sunday")
-        else:
-            building = None
-            room_number = None
-
-
-        # so what is happening below is: 
-        # Statements are defined, 
-        # values are defined as strings,
-        # values are pulled from json, 
-        # queries are run
-
+        meeting_start, meeting_end, monday, tuesday, wednesday, thursday, friday, saturday, sunday = time_slot_strategy.extract_time_slot(data).values()
 
         time_slot_sql = """
         INSERT INTO time_slot
@@ -88,10 +98,6 @@ try:
         # execute command for each iteration, DOES NOT SAVE CHANGES
 
         proto_cursor.execute(time_slot_sql, time_slot_vals)
-
-        
-        
-
 
         # this command commits to database (duh)
 
