@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from QueryBuilder import search_courses
+from QueryBuilder import QueryBuilder
 
 app = FastAPI()
 
@@ -68,10 +68,22 @@ def get_courses(
     class_name: str | None = None,
     subject: str | None = None
 ):
-    return search_courses(
-        credits=credits,
-        crn=crn,
-        course_number=course_number,
-        class_name=class_name,
-        subject=subject
-    )
+
+    builder = QueryBuilder()
+
+    if crn:
+        builder.filter_crn(crn)
+
+    if credits:
+        builder.filter_credits(credits)
+
+    if course_number:
+        builder.filter_course_number(course_number)
+
+    if class_name:
+        builder.filter_class_name(class_name)
+
+    if subject:
+        builder.filter_subject(subject)
+
+    return builder.execute()
