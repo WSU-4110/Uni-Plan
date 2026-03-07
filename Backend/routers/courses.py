@@ -1,0 +1,67 @@
+from fastapi import APIRouter, Query
+from db import get_conn
+
+router = APIRouter()
+
+@router.get("/search")
+def search_courses(
+    q: str = Query(default=""),
+    term_id: int | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+):
+    q = (q or "").strip().lower()
+
+    sql = """
+    SELECT
+        s."CRN" AS crn,
+        s.term_id AS term_id,
+        c.subject AS subject,
+        c.course_number AS course_number,
+        c.title AS title,
+        c.credit_hours AS credit_hours,
+        c.instructor AS instructor
+    FROM section s
+    JOIN course c ON c.id = s.course_id
+    WHERE
+        (%(term_id)s IS NULL OR s.term_id = %(term_id)s)
+        AND (
+            %(q)s = '' OR
+            LOWER(c.title) LIKE %(q_like)s OR
+            LOWER(c.subject) LIKE %(q_like)s OR
+            LOWER(c.course_number) LIKE %(q_like)s OR
+            CAST(s."CRN" AS TEXT) LIKE %(q_like)s OR
+            LOWER(COALESCE(c.instructor, '')) LIKE %(q_like)s
+        )
+    ORDER BY c.subject, c.course_number, s."CRN"
+    LIMIT %(limit)s;
+    """
+
+    params = {
+        "q": q,
+        "q_like": f"%{q}%",
+        "term_id": term_id,
+        "limit": limit,
+    }
+
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    results = []
+    for r in rows:
+        results.append(
+            {
+                "courseCode": f"{r['subject']} {r['course_number']}",
+                "crn": str(r["crn"]),
+                "term": str(r["term_id"]),
+                "name": r["title"],
+                "credits": r["credit_hours"],
+                "instructor": r["instructor"] or "TBA",
+            }
+        )
+
+    return {"results": results}
