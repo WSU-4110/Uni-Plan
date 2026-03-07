@@ -1,6 +1,7 @@
-=from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from routers.courses import router as courses_router
 
 app = FastAPI()
 
@@ -57,3 +58,6 @@ def logout():
 @app.get("/")
 def root():
     return {"message": "FastAPI backend is running"}
+
+
+app.include_router(courses_router, prefix="/api/courses")
