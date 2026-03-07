@@ -6,21 +6,36 @@ import person from "../../assets/images/person.png";
 import lock from "../../assets/images/lock.png";
 import checkmark from "../../assets/images/checkmark.png";
 
-function authenticateLogin(username, password) {
-    return username === "validUsername" && password === "validPassword";
-}
-
 function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
-        if (authenticateLogin(username, password)) {
-            navigate("/home", { replace: true });
-        } else {
-            console.log("Login failed");
+        setError("");
+        setLoading(true);
+
+        try {
+            const res = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password }),
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                navigate("/home", { replace: true });
+            } else {
+                setError(data.message || "Invalid username or password");
+            }
+        } catch {
+            setError("Unable to reach the server. Please try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -46,6 +61,11 @@ function LoginPage() {
                 </p>
 
                 <form onSubmit={handleSubmit}>
+                    {error && (
+                        <p className="mx-5 mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                            {error}
+                        </p>
+                    )}
                     <div className="w-full mb-5 px-5">
                         <div className="flex items-center gap-2 mb-1.5">
                             <img src={person} className="w-2.5 h-2.5" alt="User icon" />
@@ -77,10 +97,11 @@ function LoginPage() {
                     <div className="w-full mb-5 px-5">
                         <button
                             type="submit"
-                            className="flex items-center gap-2 bg-[whitesmoke] text-[#1ab02b] border border-[darkgrey] px-5 py-2.5 rounded font-semibold cursor-pointer"
+                            disabled={loading}
+                            className="flex items-center gap-2 bg-[whitesmoke] text-[#1ab02b] border border-[darkgrey] px-5 py-2.5 rounded font-semibold cursor-pointer disabled:opacity-50"
                         >
                             <img src={checkmark} className="w-5 h-5" alt="Checkmark icon" />
-                            Login
+                            {loading ? "Logging in..." : "Login"}
                         </button>
                     </div>
                 </form>

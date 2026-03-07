@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from auth import verify_password
+import os
 
 app = FastAPI()
 
@@ -24,7 +25,8 @@ class LoginRequest(BaseModel):
 def get_users():
     users = {}
 
-    with open("users.txt", "r") as file:
+    users_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "users.txt")
+    with open(users_path, "r") as file:
         for line in file:
             line = line.strip()
 
