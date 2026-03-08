@@ -95,6 +95,8 @@ def search_courses(
     for r in rows:
         results.append(
             {
+                "subject": r["subject"],
+                "courseNumber": r["course_number"],
                 "courseCode": f"{r['subject']} {r['course_number']}",
                 "crn": str(r["crn"]),
                 "term": str(r["term_id"]),
