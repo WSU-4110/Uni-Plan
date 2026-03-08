@@ -18,6 +18,13 @@ def days_str(r: dict) -> str:
         out += "F"
     return out or "TBA"
 
+def format_time_range(r: dict) -> str:
+    start = r.get("start_time")
+    end = r.get("end_time")
+    if not start or not end:
+        return "TBA"
+    return f"{start} - {end}"
+
 @router.get("/search")
 def search_courses(
     q: str = Query(default=""),
@@ -39,7 +46,9 @@ def search_courses(
         s.tuesday AS tuesday,
         s.wednesday AS wednesday,
         s.thursday AS thursday,
-        s.friday AS friday
+        s.friday AS friday,
+        s.start_time AS start_time,
+        s.end_time AS end_time
     FROM section s
     JOIN course c ON c.id = s.course_id
     WHERE
@@ -81,7 +90,8 @@ def search_courses(
                 "name": r["title"],
                 "credits": r["credit_hours"],
                 "instructor": r["instructor"] or "TBA",
-                "days": days_str(r)
+                "days": days_str(r),
+                "time": format_time_range(r),
             }
         )
 
