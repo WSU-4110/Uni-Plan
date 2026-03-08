@@ -18,16 +18,23 @@ def days_str(r: dict) -> str:
         out += "F"
     return out or "TBA"
 
+def minutes_to_time_str(m):
+    if m is None:
+        return None
+    hour = m // 60
+    minute = m % 60
+    return f"{hour:02d}:{minute:02d}"
+
 def format_time_range(r: dict) -> str:
-    start = r.get("start_time")
-    end = r.get("end_time")
-    if not start or not end:
+    start = r.get("start_min")
+    end = r.get("end_min")
+    if start is None or end is None:
         return "TBA"
-    return f"{start} - {end}"
+    return f"{minutes_to_time_str(start)} - {minutes_to_time_str(end)}"
 
 def format_location(r: dict) -> str:
     building = r.get("building")
-    room = r.get("room")
+    room = r.get("room_number")
     if building and room:
         return f"{building} {room}"
     if building:
@@ -51,17 +58,18 @@ def search_courses(
         c.title AS title,
         c.credit_hours AS credit_hours,
         c.instructor AS instructor,
-        s.monday AS monday,
-        s.tuesday AS tuesday,
-        s.wednesday AS wednesday,
-        s.thursday AS thursday,
-        s.friday AS friday,
-        s.start_time AS start_time,
-        s.end_time AS end_time,
-        s.building AS building,
-        s.room AS room
+        c.building AS building,
+        c.room_number AS room_number,
+        t.monday AS monday,
+        t.tuesday AS tuesday,
+        t.wednesday AS wednesday,
+        t.thursday AS thursday,
+        t.friday AS friday,
+        t.start_min AS start_min,
+        t.end_min AS end_min
     FROM section s
     JOIN course c ON c.id = s.course_id
+    LEFT JOIN time_slot t ON t.id = c.id
     WHERE
         (%(term_id)s IS NULL OR s.term_id = %(term_id)s)
         AND (
