@@ -25,6 +25,15 @@ def format_time_range(r: dict) -> str:
         return "TBA"
     return f"{start} - {end}"
 
+def format_location(r: dict) -> str:
+    building = r.get("building")
+    room = r.get("room")
+    if building and room:
+        return f"{building} {room}"
+    if building:
+        return building
+    return "TBA"
+
 @router.get("/search")
 def search_courses(
     q: str = Query(default=""),
@@ -48,7 +57,9 @@ def search_courses(
         s.thursday AS thursday,
         s.friday AS friday,
         s.start_time AS start_time,
-        s.end_time AS end_time
+        s.end_time AS end_time,
+        s.building AS building,
+        s.room AS room
     FROM section s
     JOIN course c ON c.id = s.course_id
     WHERE
@@ -92,6 +103,7 @@ def search_courses(
                 "instructor": r["instructor"] or "TBA",
                 "days": days_str(r),
                 "time": format_time_range(r),
+                "location": format_location(r),
             }
         )
 
