@@ -1,4 +1,5 @@
 fastapi
 uvicorn
 psycopg2-binary
+bcrypt
 pydantic
