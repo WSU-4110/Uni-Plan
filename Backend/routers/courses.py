@@ -3,6 +3,21 @@ from db import get_conn
 
 router = APIRouter()
 
+def days_str(r: dict) -> str:
+    """boolean columns -> 'MWF' / 'TR' / 'TBA'"""
+    out = ""
+    if r.get("monday"):
+        out += "M"
+    if r.get("tuesday"):
+        out += "T"
+    if r.get("wednesday"):
+        out += "W"
+    if r.get("thursday"):
+        out += "R"
+    if r.get("friday"):
+        out += "F"
+    return out or "TBA"
+
 @router.get("/search")
 def search_courses(
     q: str = Query(default=""),
@@ -19,7 +34,12 @@ def search_courses(
         c.course_number AS course_number,
         c.title AS title,
         c.credit_hours AS credit_hours,
-        c.instructor AS instructor
+        c.instructor AS instructor,
+        s.monday AS monday,
+        s.tuesday AS tuesday,
+        s.wednesday AS wednesday,
+        s.thursday AS thursday,
+        s.friday AS friday
     FROM section s
     JOIN course c ON c.id = s.course_id
     WHERE
@@ -61,6 +81,7 @@ def search_courses(
                 "name": r["title"],
                 "credits": r["credit_hours"],
                 "instructor": r["instructor"] or "TBA",
+                "days": days_str(r)
             }
         )
 
