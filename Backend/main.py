@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from routers.courses import router as courses_router
 from fastapi.middleware.cors import CORSMiddleware
 from auth import verify_password
 import os
@@ -54,3 +55,20 @@ def login(data: LoginRequest):
         "success": False,
         "message": "Invalid username or password"
     }
+
+# LOGOUT
+@app.post("/api/logout")
+def logout():
+    return {
+        "success": True,
+        "message": "Logged out successfully"
+    }
+
+
+# Root route (so you don't see "Not Found")
+@app.get("/")
+def root():
+    return {"message": "FastAPI backend is running"}
+
+app.include_router(courses_router, prefix="/api/courses")
+
