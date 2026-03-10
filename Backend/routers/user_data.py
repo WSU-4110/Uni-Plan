@@ -12,8 +12,8 @@ def save_courses(courses: CourseList):
     try:
         cur = conn.cursor()
         for course_id in courses.course_ids:
-            sql = "INSERT INTO plan(user, id) Values (%s, %s)"
-            cur.execute(sql,(courses.user, course_id))
+            sql = "INSERT INTO plan(student_id, id, term_id, name) Values (%s, %s, %s, %s)"
+            cur.execute(sql,(courses.user, course_id, courses.term, courses.name))
 
         conn.commit()
     finally:
