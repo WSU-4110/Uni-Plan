@@ -1,16 +1,42 @@
-export default function ErrorMessage({ message, onClose }) {
+import { useEffect, useState } from "react";
+
+export default function ErrorMessage({ message, onClose, type = "error" }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!message) {
+      setVisible(false);
+      return;
+    }
+    setVisible(true);
+    const hide = setTimeout(() => setVisible(false), 4700);
+    const close = setTimeout(() => onClose?.(), 5000);
+    return () => {
+      clearTimeout(hide);
+      clearTimeout(close);
+    };
+  }, [message, onClose]);
+
   if (!message) return null;
 
+  const styles =
+    type === "warning"
+      ? "bg-amber-500 text-white"
+      : "bg-red-600 text-white";
+
   return (
-    <div className="fixed top-3 right-4 z-50">
-      <div className="relative bg-red-600 text-white px-3 py-2 rounded shadow-lg max-w-xs sm:max-w-sm md:max-w-md w-fit">
+    <div
+      className={`fixed top-3 right-4 z-50 transition-all duration-300 ${
+        visible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"
+      }`}
+    >
+      <div className={`relative ${styles} px-3 py-2 rounded shadow-lg max-w-xs sm:max-w-sm md:max-w-md w-fit`}>
         <button
-          onClick={onClose}
+          onClick={() => { setVisible(false); setTimeout(() => onClose?.(), 300); }}
           className="absolute top-2 right-2 text-white hover:text-gray-200 text-xl leading-none"
         >
           ✕
         </button>
-
         <p className="pr-6 break-words text-center">{message}</p>
       </div>
     </div>

@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import CourseSearch from "../../components/CourseSearch/CourseSearch";
 import WeeklySchedule from "../../components/WeeklySchedule/WeeklySchedule";
+import { detectConflicts } from "../../utils/courseUtils";
 import wayneLogo from "../../assets/images/wayneLogo.png";
 
 function HomePage() {
   const [registered, setRegistered] = useState([]);
+
+  const conflicts = useMemo(() => detectConflicts(registered), [registered]);
 
   const handleAddCourse = (course) => {
     setRegistered((prev) => [...prev, course]);
@@ -41,12 +44,13 @@ function HomePage() {
             registered={registered}
             onAddCourse={handleAddCourse}
             onRemoveCourse={handleRemoveCourse}
+            conflicts={conflicts}
           />
         </div>
 
         {/* Right: Weekly Schedule — 45%, sticky */}
         <div className="flex-1 sticky top-[calc(64px+1.5rem)] self-start" style={{ height: "calc(100vh - 64px - 3rem)" }}>
-          <WeeklySchedule registered={registered} />
+          <WeeklySchedule registered={registered} conflicts={conflicts} />
         </div>
       </main>
     </div>

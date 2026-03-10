@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import CourseDetails from "../CourseDetails/CourseDetails";
+import { findConflictingCourses } from "../../utils/courseUtils";
 
 const MOCK_COURSES = [
   {
@@ -124,6 +125,66 @@ const MOCK_COURSES = [
     building: "M. Roy Wilson State Hall",
     room: "2216",
   },
+  {
+    name: "Software Engineering",
+    crn: "55555",
+    subject: "CSC",
+    number: "2050",
+    keyword: "software",
+    term: "Spring/Summer 2026",
+    courseCode: "CSC 2050",
+    meetingDays: "MW",
+    meetingTime: "10:30 AM",
+    credits: 3,
+    instructor: "Dr. Williams",
+    relevance: 78,
+    section: "001",
+    corequisites: "No Corequisite course information available",
+    prerequisites: "CSC 1010  Minimum grade of C",
+    description: "Principles of software engineering including requirements analysis, design, implementation, testing, and maintenance. Software lifecycle models, software project management, software quality assurance.",
+    building: "M. Roy Wilson State Hall",
+    room: "3105",
+  },
+  {
+    name: "Calculus II",
+    crn: "66666",
+    subject: "MATH",
+    number: "2010",
+    keyword: "calculus",
+    term: "Spring/Summer 2026",
+    courseCode: "MATH 2010",
+    meetingDays: "MWF",
+    meetingTime: "9:30 AM",
+    credits: 4,
+    instructor: "Dr. Patel",
+    relevance: 65,
+    section: "001",
+    corequisites: "No Corequisite course information available",
+    prerequisites: "MATH 1800  Minimum grade of C",
+    description: "Techniques and applications of integration; infinite series including convergence tests, power series, and Taylor series; polar coordinates; parametric equations.",
+    building: "M. Roy Wilson State Hall",
+    room: "1410",
+  },
+  {
+    name: "Physics II",
+    crn: "77777",
+    subject: "PHY",
+    number: "2020",
+    keyword: "electromagnetism",
+    term: "Spring/Summer 2026",
+    courseCode: "PHY 2020",
+    meetingDays: "MWF",
+    meetingTime: "1:20 PM",
+    credits: 4,
+    instructor: "Dr. Kim",
+    relevance: 70,
+    section: "001",
+    corequisites: "PHY 2021 (Lab)",
+    prerequisites: "PHY 2010  Minimum grade of C-",
+    description: "Electricity and magnetism, wave optics, modern physics. For students specializing in physics, biology, chemistry, mathematics or engineering.",
+    building: "Science Hall",
+    room: "1220",
+  },
 ];
 
 const SORT_OPTIONS = [
@@ -145,7 +206,7 @@ function sortResults(results, sortBy, sortOrder) {
   });
 }
 
-export default function CourseSearch({ registered = [], onAddCourse, onRemoveCourse }) {
+export default function CourseSearch({ registered = [], onAddCourse, onRemoveCourse, conflicts = new Set() }) {
   const [courseSubject, setCourseSubject] = useState("");
   const [courseNumber, setCourseNumber] = useState("");
   const [crnSearch, setCrnSearch] = useState("");
@@ -159,6 +220,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
   const [filterCredits, setFilterCredits] = useState("");
   const [filterInstructor, setFilterInstructor] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [conflictMessage, setConflictMessage] = useState("");
 
   const totalCredits = registered.reduce((sum, c) => sum + (c.credits || 0), 0);
 
@@ -186,6 +248,11 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
     if (totalCredits + course.credits > 18) {
       showError("Error: Cannot exceed 18 credits.");
       return;
+    }
+    const conflicting = findConflictingCourses(course, registered);
+    if (conflicting.length > 0) {
+      const names = conflicting.map((c) => c.courseCode).join(", ");
+      setConflictMessage(`⚠ Time conflict: ${course.courseCode} overlaps with ${names}.`);
     }
     onAddCourse?.(course);
   };
@@ -244,6 +311,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
   return (
     <div className="space-y-4">
       <ErrorMessage message={errorMessage} onClose={() => setErrorMessage("")} />
+      <ErrorMessage message={conflictMessage} onClose={() => setConflictMessage("")} type="warning" />
 
       {selectedCourse && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto py-8">
@@ -395,13 +463,20 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
 
           {sortedResults.length > 0 ? (
             <ul className="flex flex-col gap-3">
-              {sortedResults.map((course) => (
-                <li key={course.crn} className="bg-white border border-[#e2e8f0] rounded-lg p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 hover:shadow-md hover:border-[#cbd5e1] transition">
+              {sortedResults.map((course) => {
+                const hasConflict = conflicts.has(course.crn);
+                return (
+                <li key={course.crn} className={`bg-white border rounded-lg p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 hover:shadow-md transition ${hasConflict ? "border-red-400 bg-red-50" : "border-[#e2e8f0] hover:border-[#cbd5e1]"}`}>
                   <div className="flex flex-col gap-2 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-semibold text-[#0F3B2E] bg-[#d1fae5] px-2 py-0.5 rounded">{course.courseCode}</span>
                       <span className="text-xs text-[#64748b]">CRN: {course.crn}</span>
                       <span className="text-xs text-[#64748b]">{course.term}</span>
+                      {hasConflict && (
+                        <span className="text-xs font-semibold text-red-600 bg-red-100 border border-red-300 px-2 py-0.5 rounded-full">
+                          ⚠ Conflict
+                        </span>
+                      )}
                     </div>
 
                     <p onClick={() => openCourse(course)} className="text-base font-semibold text-[#1e293b] hover:underline underline-offset-4 cursor-pointer">{course.name}</p>
@@ -431,7 +506,8 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
                     )}
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           ) : (
             <div className="bg-white border border-[#e2e8f0] rounded-lg p-12 flex flex-col items-center justify-center text-center text-[#64748b]">
