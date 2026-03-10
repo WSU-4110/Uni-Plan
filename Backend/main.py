@@ -12,6 +12,8 @@ app = FastAPI()
 class CourseList(BaseModel):
     course_ids: list[str]
     user: str
+    term: int
+    name: str
 
 # Allow frontend to connect
 app.add_middleware(
