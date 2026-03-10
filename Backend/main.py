@@ -10,7 +10,8 @@ app = FastAPI()
 
 #used for save and loading
 class CourseList(BaseModel):
-    course_ids: list[str] | None = None
+    course_ids: list[str]
+    user: str
 
 # Allow frontend to connect
 app.add_middleware(
