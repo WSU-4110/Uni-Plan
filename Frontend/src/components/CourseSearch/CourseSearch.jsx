@@ -395,7 +395,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
 
           {sortedResults.length > 0 ? (
             <ul className="flex flex-col gap-3">
-              {sortedResults.map((course, index) => (
+              {sortedResults.map((course) => (
                 <li key={course.crn} className="bg-white border border-[#e2e8f0] rounded-lg p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 hover:shadow-md hover:border-[#cbd5e1] transition">
                   <div className="flex flex-col gap-2 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
