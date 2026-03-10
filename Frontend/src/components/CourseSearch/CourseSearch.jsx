@@ -145,7 +145,7 @@ function sortResults(results, sortBy, sortOrder) {
   });
 }
 
-export default function CourseSearch() {
+export default function CourseSearch({ registered = [], onAddCourse, onRemoveCourse }) {
   const [courseSubject, setCourseSubject] = useState("");
   const [courseNumber, setCourseNumber] = useState("");
   const [crnSearch, setCrnSearch] = useState("");
@@ -159,7 +159,8 @@ export default function CourseSearch() {
   const [filterCredits, setFilterCredits] = useState("");
   const [filterInstructor, setFilterInstructor] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [totalCredits, setTotalCredits] = useState(0);
+
+  const totalCredits = registered.reduce((sum, c) => sum + (c.credits || 0), 0);
 
   const [selectedCourse, setSelectedCourse] = useState(null);
 
@@ -175,20 +176,19 @@ export default function CourseSearch() {
 
   const showError = (message) => setErrorMessage(message);
 
-  //error for exceeding 18 credits 
+  const isRegistered = (course) => registered.some((c) => c.crn === course.crn);
+
   const handleAddCourse = (course) => {
+    if (isRegistered(course)) {
+      onRemoveCourse?.(course);
+      return;
+    }
     if (totalCredits + course.credits > 18) {
       showError("Error: Cannot exceed 18 credits.");
       return;
     }
-    setTotalCredits((prev) => prev + course.credits);
+    onAddCourse?.(course);
   };
-
-  //error for has a prerequisite that is not met
-  
-  //error for has a corequisite 
-
-  //error for full waiting list/ course is full
 
   const clearFilters = () => {
     setFilterDays([]);
@@ -414,7 +414,21 @@ export default function CourseSearch() {
                   </div>
 
                   <div className="flex-shrink-0">
-                    <button onClick={() => handleAddCourse(course)} className="px-4 py-1.5 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-medium rounded-md transition">Add</button>
+                    {isRegistered(course) ? (
+                      <button
+                        onClick={() => handleAddCourse(course)}
+                        className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition"
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleAddCourse(course)}
+                        className="px-4 py-1.5 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-medium rounded-md transition"
+                      >
+                        Add
+                      </button>
+                    )}
                   </div>
                 </li>
               ))}
