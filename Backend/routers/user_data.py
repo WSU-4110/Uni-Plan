@@ -8,12 +8,15 @@ router = APIRouter()
 @router.post("/save")
 def save_courses(courses: CourseList):
 
-    #query for injection
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        for course_id in courses.course_ids:
+            sql = "INSERT INTO plan(user, id) Values (%s, %s)"
+            cur.execute(sql,(courses.user, course_id))
 
+        conn.commit()
+    finally:
+        conn.close()
 
-    for course_id in CourseList.course_ids:
-
-        #append query with new course
-        return
-    
     return {"received": courses.course_ids}
