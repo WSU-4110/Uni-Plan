@@ -7,6 +7,10 @@ import os
 
 app = FastAPI()
 
+#used for save and loading
+class CourseList(BaseModel):
+    course_ids: list[str] | None = None
+
 # Allow frontend to connect
 app.add_middleware(
     CORSMiddleware,
