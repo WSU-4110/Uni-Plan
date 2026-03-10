@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import CourseDetails from "../CourseDetails/CourseDetails";
+import MySchedule from "../MySchedule/MySchedule";
+import WeeklySchedule from "../WeeklySchedule/WeeklySchedule";
 
 const MOCK_COURSES = [
   {
@@ -150,9 +152,14 @@ export default function CourseSearch() {
   const [filterCredits, setFilterCredits] = useState("");
   const [filterInstructor, setFilterInstructor] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [totalCredits, setTotalCredits] = useState(0);
+  const [scheduledCourses, setScheduledCourses] = useState([]);
 
   const [selectedCourse, setSelectedCourse] = useState(null);
+
+  const totalCredits = useMemo(
+    () => scheduledCourses.reduce((sum, c) => sum + c.credits, 0),
+    [scheduledCourses]
+  );
 
   const handleSearch = () => setHasSearched(true);
 
@@ -166,20 +173,21 @@ export default function CourseSearch() {
 
   const showError = (message) => setErrorMessage(message);
 
-  //error for exceeding 18 credits 
   const handleAddCourse = (course) => {
+    if (scheduledCourses.some((c) => c.crn === course.crn)) {
+      showError("This course is already in your schedule.");
+      return;
+    }
     if (totalCredits + course.credits > 18) {
       showError("Error: Cannot exceed 18 credits.");
       return;
     }
-    setTotalCredits((prev) => prev + course.credits);
+    setScheduledCourses((prev) => [...prev, course]);
   };
 
-  //error for has a prerequisite that is not met
-  
-  //error for has a corequisite 
-
-  //error for full waiting list/ course is full
+  const handleRemoveCourse = (crn) => {
+    setScheduledCourses((prev) => prev.filter((c) => c.crn !== crn));
+  };
 
   const clearFilters = () => {
     setFilterDays([]);
@@ -229,7 +237,8 @@ export default function CourseSearch() {
   const sortedResults = useMemo(() => sortResults(results, sortBy, sortOrder), [results, sortBy, sortOrder]);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col lg:flex-row gap-4 items-start">
+      <div className="flex-1 min-w-0 space-y-4">
       <ErrorMessage message={errorMessage} onClose={() => setErrorMessage("")} />
 
       {selectedCourse && (
@@ -383,7 +392,22 @@ export default function CourseSearch() {
                   </div>
 
                   <div className="flex-shrink-0">
-                    <button onClick={() => handleAddCourse(course)} className="px-4 py-1.5 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-medium rounded-md transition">Add</button>
+                    {(() => {
+                      const isAdded = scheduledCourses.some((c) => c.crn === course.crn);
+                      return (
+                        <button
+                          onClick={() => handleAddCourse(course)}
+                          disabled={isAdded}
+                          className={
+                            isAdded
+                              ? "px-4 py-1.5 text-sm font-medium rounded-md bg-[#d1fae5] text-[#065f46] border border-[#6ee7b7] cursor-default"
+                              : "px-4 py-1.5 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-medium rounded-md transition"
+                          }
+                        >
+                          {isAdded ? "Added ✓" : "Add"}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </li>
               ))}
@@ -396,6 +420,16 @@ export default function CourseSearch() {
           )}
         </div>
       )}
+      </div>
+
+      <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 space-y-4 lg:sticky lg:top-[72px]">
+        <MySchedule
+          courses={scheduledCourses}
+          onRemove={handleRemoveCourse}
+          totalCredits={totalCredits}
+        />
+        <WeeklySchedule courses={scheduledCourses} />
+      </div>
     </div>
   );
 }
