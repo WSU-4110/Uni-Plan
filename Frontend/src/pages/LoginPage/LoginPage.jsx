@@ -18,6 +18,7 @@ function LoginPage() {
     const handleSubmit = (event) => {
         event.preventDefault();
         if (authenticateLogin(username, password)) {
+            localStorage.setItem("isLoggedIn", "true");
             navigate("/home", { replace: true });
         } else {
             console.log("Login failed");
