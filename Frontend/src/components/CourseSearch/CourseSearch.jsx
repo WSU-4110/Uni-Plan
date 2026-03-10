@@ -6,7 +6,8 @@ const MOCK_COURSES = [
   {
     name: "Intro to Computer Science",
     crn: "12345",
-    subject: "Computer Science",
+    subject: "CSC",
+    number: "1010",
     keyword: "programming",
     term: "Spring/Summer 2026",
     courseCode: "CSC 1010",
@@ -26,10 +27,11 @@ const MOCK_COURSES = [
   {
     name: "Database",
     crn: "67890",
-    subject: "Computer Science",
+    subject: "CSC",
+    number: "3100",
     keyword: "algorithms",
     term: "Fall 2026",
-    courseCode: "CS 3100",
+    courseCode: "CSC 3100",
     meetingDays: "TR",
     meetingTime: "2:00 PM",
     credits: 3,
@@ -45,7 +47,8 @@ const MOCK_COURSES = [
   {
     name: "Calculus I",
     crn: "11111",
-    subject: "Math",
+    subject: "MATH",
+    number: "1800",
     keyword: "calculus",
     term: "Spring/Summer 2026",
     courseCode: "MATH 1800",
@@ -64,7 +67,8 @@ const MOCK_COURSES = [
   {
     name: "English Composition",
     crn: "22222",
-    subject: "English",
+    subject: "ENG",
+    number: "1010",
     keyword: "writing",
     term: "Fall 2026",
     courseCode: "ENG 1010",
@@ -83,7 +87,8 @@ const MOCK_COURSES = [
   {
     name: "Physics I",
     crn: "33333",
-    subject: "Physics",
+    subject: "PHY",
+    number: "2010",
     keyword: "mechanics",
     term: "Spring/Summer 2026",
     courseCode: "PHY 2010",
@@ -102,10 +107,11 @@ const MOCK_COURSES = [
   {
     name: "Algorithms",
     crn: "44444",
-    subject: "Computer Science",
+    subject: "CSC",
+    number: "5800",
     keyword: "complexity",
     term: "Fall 2026",
-    courseCode: "CS 5800",
+    courseCode: "CSC 5800",
     meetingDays: "MW",
     meetingTime: "3:00 PM",
     credits: 3,
@@ -140,7 +146,10 @@ function sortResults(results, sortBy, sortOrder) {
 }
 
 export default function CourseSearch() {
-  const [searchText, setSearchText] = useState("");
+  const [courseSubject, setCourseSubject] = useState("");
+  const [courseNumber, setCourseNumber] = useState("");
+  const [crnSearch, setCrnSearch] = useState("");
+
   const [term, setTerm] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [sortBy, setSortBy] = useState("courseCode");
@@ -205,15 +214,19 @@ export default function CourseSearch() {
   }, [filterDays, filterCredits, filterInstructor, term]);
 
   const results = useMemo(() => {
-    const q = searchText.trim().toLowerCase();
+    const subjectQ = courseSubject.trim().toLowerCase();
+    const numberQ = courseNumber.trim().toLowerCase();
+    const crnQ = crnSearch.trim().toLowerCase();
+
     return MOCK_COURSES.filter((c) => {
       if (term && c.term !== term) return false;
-      if (q) {
-        const hay = `${c.name} ${c.crn} ${c.subject} ${c.keyword} ${c.courseCode} ${c.instructor}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
+
+      if (subjectQ && !c.subject.toLowerCase().includes(subjectQ)) return false;
+      if (numberQ && !c.number.toLowerCase().includes(numberQ)) return false;
+      if (crnQ && !c.crn.toLowerCase().includes(crnQ)) return false;
+
       if (filterDays.length) {
-        const hasDay = filterDays.every((d) => c.meetingDays.includes(d));
+        const hasDay = filterDays.some((d) => c.meetingDays.includes(d));
         if (!hasDay) return false;
       }
       if (filterCredits) {
@@ -224,7 +237,7 @@ export default function CourseSearch() {
       }
       return true;
     });
-  }, [searchText, term, filterDays, filterCredits, filterInstructor]);
+  }, [courseSubject, courseNumber, crnSearch, term, filterDays, filterCredits, filterInstructor]);
 
   const sortedResults = useMemo(() => sortResults(results, sortBy, sortOrder), [results, sortBy, sortOrder]);
 
@@ -257,15 +270,33 @@ export default function CourseSearch() {
             <option value="Fall 2026">Fall 2026</option>
           </select>
 
-          <div className="flex flex-1 gap-2">
+          <div className="flex flex-wrap items-end gap-2 flex-1">
             <input
               type="text"
-              placeholder="Course name, CRN, subject, or keyword"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Course Subject"
+              value={courseSubject}
+              onChange={(e) => setCourseSubject(e.target.value)}
               onKeyDown={handleKeyDown}
               aria-label="Search courses"
-              className="flex-1 px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+              className="flex-1 min-w-[8rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+            />
+            <input
+              type="text"
+              placeholder="Course Number"
+              value={courseNumber}
+              onChange={(e) => setCourseNumber(e.target.value)}
+              onKeyDown={handleKeyDown}
+              aria-label="Search courses"
+              className="flex-1 min-w-[8rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+            />
+            <input
+              type="text"
+              placeholder="CRN"
+              value={crnSearch}
+              onChange={(e) => setCrnSearch(e.target.value)}
+              onKeyDown={handleKeyDown}
+              aria-label="Search courses"
+              className="flex-1 min-w-[8rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
             />
             <button
               onClick={handleSearch}
@@ -277,7 +308,7 @@ export default function CourseSearch() {
         </div>
       </div>
 
-      {hasSearched && (
+      {(hasSearched || courseSubject || courseNumber ||crnSearch || term || filterDays.length > 0 || filterCredits || filterInstructor) && (
         <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-4 sm:p-6">
           <h3 className="text-sm font-semibold text-[#1e293b] mb-4">Filters</h3>
 
@@ -342,7 +373,7 @@ export default function CourseSearch() {
         </div>
       )}
 
-      {hasSearched && (
+      {(hasSearched || courseSubject || courseNumber || crnSearch || term || filterDays.length > 0 || filterCredits || filterInstructor) && (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <p className="text-sm text-[#64748b]">{sortedResults.length} course{sortedResults.length !== 1 ? "s" : ""} found</p>
