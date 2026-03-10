@@ -75,82 +75,73 @@ export default function WeeklySchedule({ registered }) {
         )}
       </div>
 
-      {/* Empty state */}
-      {registered.length === 0 && (
-        <div className="flex-1 flex items-center justify-center text-sm text-[#94a3b8] p-8 text-center">
-          Add courses to see your weekly schedule
-        </div>
-      )}
-
       {/* Grid */}
-      {registered.length > 0 && (
-        <div className="flex-1 overflow-auto">
-          <div className="flex min-w-0" style={{ minHeight: "600px" }}>
-            {/* Time column */}
-            <div className="flex-shrink-0 w-16">
-              <div className="h-9 border-b-2 border-[#e2e8f0]" />
-              {timeLabels.map((label, i) => (
-                <div
-                  key={i}
-                  className="flex items-start justify-end pr-2 text-[10px] text-[#94a3b8] border-b border-[#f1f5f9]"
-                  style={{ height: "52px" }}
-                >
-                  {label}
-                </div>
-              ))}
-            </div>
-
-            {/* Day columns */}
-            {DAYS.map((day) => {
-              const blocks = getCourseBlocks(day);
-              return (
-                <div key={day} className="flex-1 flex flex-col border-l border-[#e2e8f0] min-w-0">
-                  {/* Day header */}
-                  <div className="h-9 flex items-center justify-center text-xs font-semibold text-[#1e293b] bg-[#f8fafc] border-b-2 border-[#e2e8f0] flex-shrink-0">
-                    {day}
-                  </div>
-
-                  {/* Time slots */}
-                  <div className="relative flex-1">
-                    {/* Hour grid lines */}
-                    {timeLabels.map((_, i) => (
-                      <div
-                        key={i}
-                        className="border-b border-[#f1f5f9]"
-                        style={{ height: "52px" }}
-                      />
-                    ))}
-
-                    {/* Course blocks */}
-                    {blocks.map(({ course, top, height, color, start24, end24, location }) => (
-                      <div
-                        key={course.crn}
-                        className="absolute left-0.5 right-0.5 rounded overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:z-10 hover:shadow-md"
-                        style={{
-                          top: `${top}%`,
-                          height: `${Math.max(height, 4)}%`,
-                          backgroundColor: color,
-                        }}
-                        title={`${course.courseCode} — ${course.name}\n${formatDisplayTime(start24)} – ${formatDisplayTime(end24)}${location ? `\n${location}` : ""}`}
-                      >
-                        <div className="p-1 text-white leading-tight">
-                          <div className="text-[10px] font-semibold truncate">{course.courseCode}</div>
-                          <div className="text-[9px] opacity-90 truncate">
-                            {formatDisplayTime(start24)}
-                          </div>
-                          {location && (
-                            <div className="text-[9px] opacity-80 truncate">{location}</div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+      <div className="flex-1 overflow-auto">
+        <div className="flex min-w-0" style={{ minHeight: "600px" }}>
+          {/* Time column */}
+          <div className="flex-shrink-0 w-16">
+            <div className="h-9 border-b-2 border-[#e2e8f0]" />
+            {timeLabels.map((label, i) => (
+              <div
+                key={i}
+                className="flex items-start justify-end pr-2 text-[10px] text-[#94a3b8] border-b border-[#f1f5f9]"
+                style={{ height: "52px" }}
+              >
+                {label}
+              </div>
+            ))}
           </div>
+
+          {/* Day columns */}
+          {DAYS.map((day) => {
+            const blocks = getCourseBlocks(day);
+            return (
+              <div key={day} className="flex-1 flex flex-col border-l border-[#e2e8f0] min-w-0">
+                {/* Day header */}
+                <div className="h-9 flex items-center justify-center text-xs font-semibold text-[#1e293b] bg-[#f8fafc] border-b-2 border-[#e2e8f0] flex-shrink-0">
+                  {day}
+                </div>
+
+                {/* Time slots */}
+                <div className="relative flex-1">
+                  {/* Hour grid lines */}
+                  {timeLabels.map((_, i) => (
+                    <div
+                      key={i}
+                      className="border-b border-[#f1f5f9]"
+                      style={{ height: "52px" }}
+                    />
+                  ))}
+
+                  {/* Course blocks */}
+                  {blocks.map(({ course, top, height, color, start24, end24, location }) => (
+                    <div
+                      key={course.crn}
+                      className="absolute left-0.5 right-0.5 rounded overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:z-10 hover:shadow-md"
+                      style={{
+                        top: `${top}%`,
+                        height: `${Math.max(height, 4)}%`,
+                        backgroundColor: color,
+                      }}
+                      title={`${course.courseCode} — ${course.name}\n${formatDisplayTime(start24)} – ${formatDisplayTime(end24)}${location ? `\n${location}` : ""}`}
+                    >
+                      <div className="p-1 text-white leading-tight">
+                        <div className="text-[10px] font-semibold truncate">{course.courseCode}</div>
+                        <div className="text-[9px] opacity-90 truncate">
+                          {formatDisplayTime(start24)}
+                        </div>
+                        {location && (
+                          <div className="text-[9px] opacity-80 truncate">{location}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
     </div>
   );
 }
