@@ -25,6 +25,8 @@ function formatDisplayTime(time24) {
 }
 
 export default function WeeklySchedule({ registered }) {
+  const totalCredits = registered.reduce((sum, c) => sum + (c.credits || 0), 0);
+
   const timeLabels = [];
   for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
     const period = hour >= 12 ? "PM" : "AM";
@@ -141,6 +143,14 @@ export default function WeeklySchedule({ registered }) {
             );
           })}
         </div>
+      </div>
+
+      {/* Footer: total credits */}
+      <div className="px-4 py-2.5 border-t border-[#e2e8f0] flex items-center justify-between flex-shrink-0 bg-[#f8fafc]">
+        <span className="text-xs text-[#64748b]">Total Credits</span>
+        <span className={`text-sm font-semibold ${totalCredits > 18 ? "text-red-600" : "text-[#0F3B2E]"}`}>
+          {totalCredits} / 18
+        </span>
       </div>
     </div>
   );
