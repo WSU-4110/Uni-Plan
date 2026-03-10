@@ -63,3 +63,43 @@ export function timeToFloat(timeStr) {
   const [hours, minutes] = timeStr.split(":").map(Number);
   return hours + minutes / 60;
 }
+
+/**
+ * Returns true if two courses overlap on at least one shared day and their time ranges intersect.
+ */
+export function coursesOverlap(a, b) {
+  const daysA = parseMeetingDays(a.meetingDays);
+  const daysB = parseMeetingDays(b.meetingDays);
+  const sharedDays = daysA.filter((d) => daysB.includes(d));
+  if (sharedDays.length === 0) return false;
+
+  const startA = timeToFloat(parseTo24h(a.meetingTime));
+  const endA = startA + estimateDuration(a.meetingDays) / 60;
+  const startB = timeToFloat(parseTo24h(b.meetingTime));
+  const endB = startB + estimateDuration(b.meetingDays) / 60;
+
+  return startA < endB && startB < endA;
+}
+
+/**
+ * Returns a Set of CRNs that are involved in at least one time conflict.
+ */
+export function detectConflicts(courses) {
+  const conflictingCrns = new Set();
+  for (let i = 0; i < courses.length; i++) {
+    for (let j = i + 1; j < courses.length; j++) {
+      if (coursesOverlap(courses[i], courses[j])) {
+        conflictingCrns.add(courses[i].crn);
+        conflictingCrns.add(courses[j].crn);
+      }
+    }
+  }
+  return conflictingCrns;
+}
+
+/**
+ * Returns registered courses that conflict with the given candidate course.
+ */
+export function findConflictingCourses(candidate, registered) {
+  return registered.filter((c) => coursesOverlap(candidate, c));
+}

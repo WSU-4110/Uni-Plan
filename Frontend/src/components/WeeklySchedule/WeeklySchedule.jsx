@@ -24,8 +24,9 @@ function formatDisplayTime(time24) {
   return `${display}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-export default function WeeklySchedule({ registered }) {
+export default function WeeklySchedule({ registered, conflicts = new Set() }) {
   const totalCredits = registered.reduce((sum, c) => sum + (c.credits || 0), 0);
+  const conflictCount = conflicts.size;
 
   const timeLabels = [];
   for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
@@ -52,15 +53,17 @@ export default function WeeklySchedule({ registered }) {
 
         const colorIndex = hashCrn(course.crn) % COLORS.length;
         const location = [course.building, course.room].filter(Boolean).join(" ");
+        const isConflict = conflicts.has(course.crn);
 
         return {
           course,
           top,
           height,
-          color: COLORS[colorIndex],
+          color: isConflict ? "#dc2626" : COLORS[colorIndex],
           start24,
           end24,
           location,
+          isConflict,
         };
       });
   };
@@ -116,7 +119,7 @@ export default function WeeklySchedule({ registered }) {
                   ))}
 
                   {/* Course blocks */}
-                  {blocks.map(({ course, top, height, color, start24, end24, location }) => (
+                  {blocks.map(({ course, top, height, color, start24, end24, location, isConflict }) => (
                     <div
                       key={course.crn}
                       className="absolute left-0.5 right-0.5 rounded overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:z-10 hover:shadow-md"
@@ -124,11 +127,15 @@ export default function WeeklySchedule({ registered }) {
                         top: `${top}%`,
                         height: `${Math.max(height, 4)}%`,
                         backgroundColor: color,
+                        outline: isConflict ? "2px solid #fca5a5" : "none",
                       }}
-                      title={`${course.courseCode} — ${course.name}\n${formatDisplayTime(start24)} – ${formatDisplayTime(end24)}${location ? `\n${location}` : ""}`}
+                      title={`${isConflict ? "⚠ TIME CONFLICT\n" : ""}${course.courseCode} — ${course.name}\n${formatDisplayTime(start24)} – ${formatDisplayTime(end24)}${location ? `\n${location}` : ""}`}
                     >
                       <div className="p-1 text-white leading-tight">
-                        <div className="text-[10px] font-semibold truncate">{course.courseCode}</div>
+                        <div className="text-[10px] font-semibold truncate flex items-center gap-0.5">
+                          {isConflict && <span>⚠</span>}
+                          {course.courseCode}
+                        </div>
                         <div className="text-[9px] opacity-90 truncate">
                           {formatDisplayTime(start24)}
                         </div>
@@ -144,6 +151,16 @@ export default function WeeklySchedule({ registered }) {
           })}
         </div>
       </div>
+
+      {/* Conflict banner */}
+      {conflictCount > 0 && (
+        <div className="px-4 py-2 bg-red-50 border-t border-red-200 flex items-center gap-2 flex-shrink-0">
+          <span className="text-red-600 text-sm">⚠</span>
+          <span className="text-xs font-medium text-red-700">
+            {conflictCount} course{conflictCount !== 1 ? "s" : ""} have time conflicts. Resolve before finalizing.
+          </span>
+        </div>
+      )}
 
       {/* Footer: total credits */}
       <div className="px-4 py-2.5 border-t border-[#e2e8f0] flex items-center justify-between flex-shrink-0 bg-[#f8fafc]">
