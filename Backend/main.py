@@ -72,3 +72,8 @@ def root():
 
 app.include_router(courses_router, prefix="/api/courses")
 
+
+@app.post("/api/save")
+def save():
+    #code call for saving
+    return
