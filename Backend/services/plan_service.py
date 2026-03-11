@@ -40,7 +40,24 @@ def save_courses_to_plan(course_ids: list[int], user: str, term: int, name: str)
             (plan_id, term)
         )
 
-        for crn in course_ids:
+        for course_id in course_ids:
+            cur.execute(
+                """
+                SELECT "CRN"
+                FROM section
+                WHERE course_id = %s
+                  AND term_id = %s
+                LIMIT 1
+                """,
+                (course_id, term)
+            )
+            section = cur.fetchone()
+
+            if not section:
+                continue
+
+            crn = section["CRN"]
+
             cur.execute(
                 """
                 INSERT INTO plan_section (plan_id, "CRN", term_id)
