@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
 from db import get_conn
-from main import CourseList
+from schemas.plan_schema import CourseList
 
 router = APIRouter()
 
