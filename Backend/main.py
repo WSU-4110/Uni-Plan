@@ -1,11 +1,19 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from routers.courses import router as courses_router
+from routers.user_data import router as saves_router
 from fastapi.middleware.cors import CORSMiddleware
 from auth import verify_password
 import os
 
 app = FastAPI()
+
+#used for save and loading
+class CourseList(BaseModel):
+    course_ids: list[str]
+    user: str
+    term: int
+    name: str
 
 # Allow frontend to connect
 app.add_middleware(
@@ -72,3 +80,9 @@ def root():
 
 app.include_router(courses_router, prefix="/api/courses")
 
+
+@app.post("/")
+def root():
+    return {"message": "FastAPI backend is running"}
+
+app.include_router(saves_router, prefix="/api/save")
