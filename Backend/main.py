@@ -72,11 +72,4 @@ def root():
     return {"message": "FastAPI backend is running"}
 
 app.include_router(courses_router, prefix="/api/courses")
-
-
-@app.post("/")
-def root():
-    return {"message": "FastAPI backend is running"}
-
-app.include_router(saves_router, prefix="/api/save")
 app.include_router(plans_router, prefix="/api/plans")
