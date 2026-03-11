@@ -5,3 +5,8 @@ class CourseList(BaseModel):
     user: str
     term: int
     name: str
+
+class LoadPlanRequest(BaseModel):
+    user: str
+    term: int
+    name: str
