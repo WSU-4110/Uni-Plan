@@ -1,12 +1,26 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CourseSearch from "../../components/CourseSearch/CourseSearch";
+import WeeklySchedule from "../../components/WeeklySchedule/WeeklySchedule";
+import MySchedule from "../../components/MySchedule/MySchedule";
+import { detectConflicts } from "../../utils/courseUtils";
 import wayneLogo from "../../assets/images/wayneLogo.png";
 
 function HomePage() {
+  const [registered, setRegistered] = useState([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
+
+  const conflicts = useMemo(() => detectConflicts(registered), [registered]);
+
+  const handleAddCourse = (course) => {
+    setRegistered((prev) => [...prev, course]);
+  };
+
+  const handleRemoveCourse = (course) => {
+    setRegistered((prev) => prev.filter((c) => c.crn !== course.crn));
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
@@ -24,7 +38,7 @@ function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f0f4f3]">
+    <div className="min-h-screen bg-[#f0f4f3] flex flex-col">
       <header className="sticky top-0 z-10 bg-[#0F3B2E] border-b border-[#0a2a20] shadow-md">
         <div className="flex items-center gap-3 px-[5%] h-[64px]">
           <img
@@ -75,8 +89,31 @@ function HomePage() {
         </div>
       </header>
 
-      <main className="px-4 sm:px-6 lg:px-8 py-6">
-        <CourseSearch />
+      <main className="flex-1 flex gap-4 px-4 sm:px-6 lg:px-8 py-6 min-h-0">
+        {/* Left: Search section — 55% */}
+        <div className="w-[55%] flex-shrink-0 overflow-y-auto">
+          <CourseSearch
+            registered={registered}
+            onAddCourse={handleAddCourse}
+            onRemoveCourse={handleRemoveCourse}
+            conflicts={conflicts}
+          />
+        </div>
+
+        {/* Right: My Schedule + Weekly Schedule */}
+        <div
+          className="flex-1 sticky top-[calc(64px+1.5rem)] self-start flex flex-col gap-4 overflow-y-auto"
+          style={{ maxHeight: "calc(100vh - 64px - 3rem)" }}
+        >
+          <MySchedule
+            courses={registered}
+            onRemove={(crn) => handleRemoveCourse({ crn })}
+            totalCredits={registered.reduce((sum, c) => sum + (c.credits || 0), 0)}
+          />
+          <div className="flex-1 min-h-0">
+            <WeeklySchedule registered={registered} conflicts={conflicts} />
+          </div>
+        </div>
       </main>
     </div>
   );

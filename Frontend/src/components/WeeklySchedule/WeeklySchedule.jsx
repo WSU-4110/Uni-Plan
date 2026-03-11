@@ -1,145 +1,174 @@
-const DAYS = ["M", "T", "W", "R", "F"];
-const DAY_LABELS = { M: "Mon", T: "Tue", W: "Wed", R: "Thu", F: "Fri" };
+import { parseMeetingDays, parseTo24h, addMinutes, estimateDuration, timeToFloat } from "../../utils/courseUtils";
 
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const START_HOUR = 8;
 const END_HOUR = 20;
-const HOUR_HEIGHT = 56;
+const HOURS_RANGE = END_HOUR - START_HOUR;
 
-const COURSE_COLORS = [
-  { bg: "#dbeafe", border: "#3b82f6", text: "#1e40af" },
-  { bg: "#fce7f3", border: "#ec4899", text: "#9d174d" },
-  { bg: "#fef3c7", border: "#f59e0b", text: "#92400e" },
-  { bg: "#d1fae5", border: "#10b981", text: "#065f46" },
-  { bg: "#ede9fe", border: "#8b5cf6", text: "#4c1d95" },
-  { bg: "#fee2e2", border: "#ef4444", text: "#991b1b" },
+const COLORS = [
+  "#006853", "#059669", "#10b981", "#0d9488",
+  "#047857", "#065f46", "#14b8a6", "#0f766e",
+  "#1d4ed8", "#7c3aed", "#b45309", "#be123c",
 ];
 
-function parseTimeToMinutes(timeStr) {
-  const [time, period] = timeStr.split(" ");
-  let [hours, minutes] = time.split(":").map(Number);
-  if (period === "PM" && hours !== 12) hours += 12;
-  if (period === "AM" && hours === 12) hours = 0;
-  return hours * 60 + minutes;
+function hashCrn(crn) {
+  let h = 0;
+  for (let i = 0; i < crn.length; i++) h = (h * 31 + crn.charCodeAt(i)) >>> 0;
+  return h;
 }
 
-function getDurationMin(meetingDays) {
-  const dayCount = meetingDays.replace(/[^MTWRF]/g, "").length;
-  return dayCount >= 3 ? 50 : 75;
+function formatDisplayTime(time24) {
+  const [h, m] = time24.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const display = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  return `${display}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-function formatHour(h) {
-  if (h === 12) return "12 PM";
-  if (h < 12) return `${h} AM`;
-  return `${h - 12} PM`;
-}
+export default function WeeklySchedule({ registered, conflicts = new Set() }) {
+  const totalCredits = registered.reduce((sum, c) => sum + (c.credits || 0), 0);
+  const conflictCount = conflicts.size;
 
-export default function WeeklySchedule({ courses }) {
-  const totalHours = END_HOUR - START_HOUR;
-  const gridHeight = totalHours * HOUR_HEIGHT;
-  const hours = Array.from({ length: totalHours + 1 }, (_, i) => START_HOUR + i);
+  const timeLabels = [];
+  for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
+    const period = hour >= 12 ? "PM" : "AM";
+    const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    timeLabels.push(`${display}:00 ${period}`);
+  }
+
+  const getCourseBlocks = (day) => {
+    return registered
+      .filter((course) => {
+        const days = parseMeetingDays(course.meetingDays);
+        return days.includes(day);
+      })
+      .map((course) => {
+        const start24 = parseTo24h(course.meetingTime);
+        const duration = estimateDuration(course.meetingDays);
+        const end24 = addMinutes(start24, duration);
+
+        const startFloat = timeToFloat(start24);
+        const endFloat = timeToFloat(end24);
+        const top = ((startFloat - START_HOUR) / HOURS_RANGE) * 100;
+        const height = ((endFloat - startFloat) / HOURS_RANGE) * 100;
+
+        const colorIndex = hashCrn(course.crn) % COLORS.length;
+        const location = [course.building, course.room].filter(Boolean).join(" ");
+        const isConflict = conflicts.has(course.crn);
+
+        return {
+          course,
+          top,
+          height,
+          color: isConflict ? "#dc2626" : COLORS[colorIndex],
+          start24,
+          end24,
+          location,
+          isConflict,
+        };
+      });
+  };
 
   return (
-    <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-4">
-      <h2 className="text-base font-semibold text-[#1e293b] mb-3">
-        Weekly Schedule
-      </h2>
+    <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm flex flex-col h-full">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-[#e2e8f0] flex items-center justify-between flex-shrink-0">
+        <h2 className="text-base font-semibold text-[#1e293b]">Weekly Schedule</h2>
+        {registered.length > 0 && (
+          <span className="text-xs text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full">
+            {registered.length} course{registered.length !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
 
-      {courses.length === 0 ? (
-        <p className="text-sm text-[#94a3b8] text-center py-8">
-          Add courses to see your weekly schedule.
-        </p>
-      ) : (
-        <div className="overflow-x-auto">
-          <div style={{ minWidth: 340 }}>
-            <div className="flex mb-1">
-              <div className="w-10 flex-shrink-0" />
-              {DAYS.map((day) => (
-                <div
-                  key={day}
-                  className="flex-1 text-center text-[11px] font-semibold text-[#475569]"
-                >
-                  {DAY_LABELS[day]}
-                </div>
-              ))}
-            </div>
-
-            <div className="flex border-t border-[#e2e8f0]">
+      {/* Grid */}
+      <div className="flex-1 overflow-auto">
+        <div className="flex min-w-0" style={{ minHeight: "600px" }}>
+          {/* Time column */}
+          <div className="flex-shrink-0 w-16">
+            <div className="h-9 border-b-2 border-[#e2e8f0]" />
+            {timeLabels.map((label, i) => (
               <div
-                className="w-10 flex-shrink-0 relative"
-                style={{ height: gridHeight }}
+                key={i}
+                className="flex items-start justify-end pr-2 text-[10px] text-[#94a3b8] border-b border-[#f1f5f9]"
+                style={{ height: "52px" }}
               >
-                {hours.map((h) => (
-                  <div
-                    key={h}
-                    style={{ top: (h - START_HOUR) * HOUR_HEIGHT - 6 }}
-                    className="absolute right-1 text-[9px] text-[#94a3b8] leading-none"
-                  >
-                    {formatHour(h)}
-                  </div>
-                ))}
+                {label}
               </div>
+            ))}
+          </div>
 
-              {DAYS.map((day) => (
-                <div
-                  key={day}
-                  className="flex-1 relative border-l border-[#e2e8f0]"
-                  style={{ height: gridHeight }}
-                >
-                  {hours.map((h) => (
+          {/* Day columns */}
+          {DAYS.map((day) => {
+            const blocks = getCourseBlocks(day);
+            return (
+              <div key={day} className="flex-1 flex flex-col border-l border-[#e2e8f0] min-w-0">
+                {/* Day header */}
+                <div className="h-9 flex items-center justify-center text-xs font-semibold text-[#1e293b] bg-[#f8fafc] border-b-2 border-[#e2e8f0] flex-shrink-0">
+                  {day}
+                </div>
+
+                {/* Time slots */}
+                <div className="relative flex-1">
+                  {/* Hour grid lines */}
+                  {timeLabels.map((_, i) => (
                     <div
-                      key={h}
-                      style={{ top: (h - START_HOUR) * HOUR_HEIGHT }}
-                      className="absolute left-0 right-0 border-t border-[#f1f5f9]"
+                      key={i}
+                      className="border-b border-[#f1f5f9]"
+                      style={{ height: "52px" }}
                     />
                   ))}
 
-                  {courses.map((course, idx) => {
-                    if (!course.meetingDays.includes(day)) return null;
-                    const startMin = parseTimeToMinutes(course.meetingTime);
-                    const duration = getDurationMin(course.meetingDays);
-                    const top =
-                      (startMin - START_HOUR * 60) * (HOUR_HEIGHT / 60);
-                    const height = Math.max(
-                      duration * (HOUR_HEIGHT / 60),
-                      20
-                    );
-                    const color = COURSE_COLORS[idx % COURSE_COLORS.length];
-
-                    return (
-                      <div
-                        key={course.crn}
-                        style={{
-                          position: "absolute",
-                          top: `${top}px`,
-                          height: `${height}px`,
-                          left: "2px",
-                          right: "2px",
-                          backgroundColor: color.bg,
-                          borderLeft: `3px solid ${color.border}`,
-                        }}
-                        className="rounded px-1 py-0.5 overflow-hidden"
-                      >
-                        <p
-                          className="text-[10px] font-bold leading-tight truncate"
-                          style={{ color: color.text }}
-                        >
+                  {/* Course blocks */}
+                  {blocks.map(({ course, top, height, color, start24, end24, location, isConflict }) => (
+                    <div
+                      key={course.crn}
+                      className="absolute left-0.5 right-0.5 rounded overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:z-10 hover:shadow-md"
+                      style={{
+                        top: `${top}%`,
+                        height: `${Math.max(height, 4)}%`,
+                        backgroundColor: color,
+                        outline: isConflict ? "2px solid #fca5a5" : "none",
+                      }}
+                      title={`${isConflict ? "⚠ TIME CONFLICT\n" : ""}${course.courseCode} — ${course.name}\n${formatDisplayTime(start24)} – ${formatDisplayTime(end24)}${location ? `\n${location}` : ""}`}
+                    >
+                      <div className="p-1 text-white leading-tight">
+                        <div className="text-[10px] font-semibold truncate flex items-center gap-0.5">
+                          {isConflict && <span>⚠</span>}
                           {course.courseCode}
-                        </p>
-                        <p
-                          className="text-[9px] leading-tight truncate"
-                          style={{ color: color.text }}
-                        >
-                          {course.meetingTime}
-                        </p>
+                        </div>
+                        <div className="text-[9px] opacity-90 truncate">
+                          {formatDisplayTime(start24)}
+                        </div>
+                        {location && (
+                          <div className="text-[9px] opacity-80 truncate">{location}</div>
+                        )}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Conflict banner */}
+      {conflictCount > 0 && (
+        <div className="px-4 py-2 bg-red-50 border-t border-red-200 flex items-center gap-2 flex-shrink-0">
+          <span className="text-red-600 text-sm">⚠</span>
+          <span className="text-xs font-medium text-red-700">
+            {conflictCount} course{conflictCount !== 1 ? "s" : ""} have time conflicts. Resolve before finalizing.
+          </span>
         </div>
       )}
+
+      {/* Footer: total credits */}
+      <div className="px-4 py-2.5 border-t border-[#e2e8f0] flex items-center justify-between flex-shrink-0 bg-[#f8fafc]">
+        <span className="text-xs text-[#64748b]">Total Credits</span>
+        <span className={`text-sm font-semibold ${totalCredits > 18 ? "text-red-600" : "text-[#0F3B2E]"}`}>
+          {totalCredits} / 18
+        </span>
+      </div>
     </div>
   );
 }
