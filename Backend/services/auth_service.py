@@ -4,7 +4,10 @@ import os
 def get_users():
     users = {}
 
-    users_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "users.txt")
+    users_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "users.txt"
+    )    
     with open(users_path, "r") as file:
         for line in file:
             line = line.strip()

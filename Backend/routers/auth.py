@@ -5,7 +5,7 @@ from auth import verify_password
 
 router = APIRouter()
 
-@router.post("/api/auth/login")
+@router.post("/login")
 def login(data: LoginRequest):
     users = get_users()
 
@@ -21,7 +21,7 @@ def login(data: LoginRequest):
     }
 
 
-@router.post("/api/logout")
+@router.post("/logout")
 def logout():
     return {
         "success": True,
