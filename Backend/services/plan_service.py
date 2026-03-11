@@ -82,3 +82,50 @@ def save_courses_to_plan(course_ids: list[int], user: str, term: int, name: str)
 
     finally:
         conn.close()
+
+def load_courses_from_plan(user: str, term: int, name: str):
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            SELECT id
+            FROM plan
+            WHERE student_id = %s
+              AND term_id = %s
+              AND name = %s
+            LIMIT 1
+            """,
+            (user, term, name)
+        )
+        plan = cur.fetchone()
+
+        if not plan:
+            return {
+                "success": False,
+                "courses": []
+            }
+
+        plan_id = plan["id"]
+
+        cur.execute(
+            """
+            SELECT s.course_id
+            FROM plan_section ps
+            JOIN section s
+              ON ps."CRN" = s."CRN"
+             AND ps.term_id = s.term_id
+            WHERE ps.plan_id = %s
+            """,
+            (plan_id,)
+        )
+        courses = cur.fetchall()
+
+        return {
+            "success": True,
+            "courses": courses
+        }
+
+    finally:
+        conn.close()
