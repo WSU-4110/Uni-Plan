@@ -1,15 +1,18 @@
-class AuthService:
-    _instance = None
+import os
 
-    def __init__(self):
-        # Example placeholder user data (you can replace later)
-        self.users = {"admin": "1234"}
+# Read users from users.txt
+def get_users():
+    users = {}
 
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            cls._instance = AuthService()
-        return cls._instance
+    users_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "users.txt")
+    with open(users_path, "r") as file:
+        for line in file:
+            line = line.strip()
 
-    def verify_user(self, username, password):
-        return self.users.get(username) == password
+            if not line:
+                continue
+
+            username, hashed = line.split(":", 1)
+            users[username] = hashed
+
+    return users
