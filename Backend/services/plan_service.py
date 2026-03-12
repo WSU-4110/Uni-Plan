@@ -1,75 +1,94 @@
 from db import get_conn
+from routers.courses import days_str, format_location, format_time_range
 
-def save_courses_to_plan(course_ids: list[int], user: str, term: int, name: str):
+def save_courses_to_plan(course_ids, user, term, name):
+
     conn = get_conn()
     try:
         cur = conn.cursor()
-        cur.execute(
-            """
-            DELETE FROM plan
-            WHERE student_id = %s
-              AND term_id = %s
-              AND name = %s
-            """,
-            (user, term, name)
-        )
+
+        delete_sql = "DELETE FROM plan WHERE student_id = %s AND term_id = %s AND name = %s"
+        cur.execute(delete_sql, (user, term, name))
 
         for course_id in course_ids:
-            cur.execute(
-                """
-                INSERT INTO plan (student_id, course_id, term_id, name, is_active)
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                (user, course_id, term, name, True)
-            )
+            sql = "INSERT INTO plan(student_id, course_id, term_id, name, is_active) VALUES (%s, %s, %s, %s, %s)"
+            cur.execute(sql, (user, course_id, term, name, True))
 
         conn.commit()
 
-        return {
-            "success": True,
-            "message": "Plan saved successfully"
-        }
-    
-    except Exception as e:
-        conn.rollback()
-        return {
-            "success": False,
-            "message": str(e)
-        }
-
     finally:
         conn.close()
 
+    return {"received": course_ids}
+
 def load_courses_from_plan(user: str, term: int, name: str):
+
     conn = get_conn()
+
     try:
         cur = conn.cursor()
 
-        cur.execute(
-            """
-            SELECT course_id
-            FROM plan
-            WHERE student_id = %s
-              AND term_id = %s
-              AND name = %s
-            """,
-            (user, term, name)
-        )
+        sql = "SELECT course_id FROM plan WHERE student_id = %s AND term_id = %s AND name = %s"
+        cur.execute(sql, (user, term, name))
 
+        result = cur.fetchall()
+
+        course_ids = [r["course_id"] for r in result]
+
+        if not course_ids:
+            return {"results": []}
+
+        sql = """
+        SELECT
+            s."CRN" AS crn,
+            s.term_id AS term_id,
+            c.id AS course_id,
+            c.subject,
+            c.course_number,
+            c.title,
+            c.credit_hours,
+            c.instructor,
+            c.building,
+            c.room_number,
+            t.monday,
+            t.tuesday,
+            t.wednesday,
+            t.thursday,
+            t.friday,
+            t.start_min,
+            t.end_min
+        FROM section s
+        JOIN course c ON c.id = s.course_id
+        LEFT JOIN time_slot t ON t.id = c.id
+        WHERE c.id = ANY(%s)
+          AND s.term_id = %s
+        ORDER BY c.subject, c.course_number
+        """
+
+        cur.execute(sql, (course_ids, term))
         rows = cur.fetchall()
-        courses = [row["course_id"] for row in rows]
 
-        return {
-            "success": True,
-            "courses": courses
-        }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "message": str(e),
-            "courses": []
-        }
-    
     finally:
         conn.close()
+
+    results = []
+
+    for r in rows:
+        results.append(
+            {
+                "courseId": r["course_id"],
+                "subject": r["subject"],
+                "courseNumber": r["course_number"],
+                "courseCode": f"{r['subject']} {r['course_number']}",
+                "crn": str(r["crn"]),
+                "term": str(r["term_id"]),
+                "name": r["title"],
+                "credits": r["credit_hours"],
+                "instructor": r["instructor"] or "TBA",
+                "days": days_str(r),
+                "time": format_time_range(r),
+                "location": format_location(r),
+            }
+        )
+
+    return {"results": results}
