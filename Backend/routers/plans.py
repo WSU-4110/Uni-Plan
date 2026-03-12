@@ -1,27 +1,22 @@
 from fastapi import APIRouter, Query
-from db import get_conn
-from main import CourseList
+from schemas.plan_schema import CourseList
+from services.plan_service import save_courses_to_plan,load_courses_from_plan
 
 router = APIRouter()
 
-
 @router.post("/save")
 def save_courses(courses: CourseList):
+    return save_courses_to_plan(
+            course_ids=courses.course_ids,
+            user=courses.user,
+            term=courses.term,
+            name=courses.name
+        )
 
-    conn = get_conn()
-    try:
-        cur = conn.cursor()
-
-        # delete previous plan with same user and name
-        delete_sql = "DELETE FROM plan WHERE student_id = %s AND name = %s"
-        cur.execute(delete_sql, (courses.user, courses.name))
-
-        for course_id in courses.course_ids:
-            sql = "INSERT INTO plan(student_id, id, term_id, name) Values (%s, %s, %s, %s)"
-            cur.execute(sql,(courses.user, course_id, courses.term, courses.name))
-
-        conn.commit()
-    finally:
-        conn.close()
-
-    return {"received": courses.course_ids}
+@router.get("/load")
+def load_courses(user: str, term: int, name: str):
+    return load_courses_from_plan(
+        user=user,
+        term=term,
+        name=name
+    )

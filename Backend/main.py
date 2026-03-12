@@ -1,19 +1,10 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
 from routers.courses import router as courses_router
-from routers.user_data import router as saves_router
+from routers.plans import router as plans_router
+from routers.auth import router as auth_router
 from fastapi.middleware.cors import CORSMiddleware
-from auth import verify_password
-import os
 
 app = FastAPI()
-
-#used for save and loading
-class CourseList(BaseModel):
-    course_ids: list[str]
-    user: str
-    term: int
-    name: str
 
 # Allow frontend to connect
 app.add_middleware(
@@ -24,65 +15,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Request model
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-
-# Read users from users.txt
-def get_users():
-    users = {}
-
-    users_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "users.txt")
-    with open(users_path, "r") as file:
-        for line in file:
-            line = line.strip()
-
-            if not line:
-                continue
-
-            username, hashed = line.split(":", 1)
-            users[username] = hashed
-
-    return users
-
-
-# LOGIN ENDPOINT
-@app.post("/api/auth/login")
-def login(data: LoginRequest):
-    users = get_users()
-
-    if data.username in users and verify_password(data.password, users[data.username]):
-        return {
-            "success": True,
-            "message": "Login successful"
-        }
-
-    return {
-        "success": False,
-        "message": "Invalid username or password"
-    }
-
-# LOGOUT
-@app.post("/api/logout")
-def logout():
-    return {
-        "success": True,
-        "message": "Logged out successfully"
-    }
-
-
 # Root route (so you don't see "Not Found")
 @app.get("/")
 def root():
     return {"message": "FastAPI backend is running"}
 
+app.include_router(auth_router, prefix="/api/auth")
 app.include_router(courses_router, prefix="/api/courses")
-
-
-@app.post("/")
-def root():
-    return {"message": "FastAPI backend is running"}
-
-app.include_router(saves_router, prefix="/api/save")
+app.include_router(plans_router, prefix="/api/plans")
