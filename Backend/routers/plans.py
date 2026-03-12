@@ -1,8 +1,15 @@
 from fastapi import APIRouter, Query
 from db import get_conn
-from main import CourseList
+from pydantic import BaseModel
 
 router = APIRouter()
+
+
+class CourseList(BaseModel):
+    course_ids: list[str]
+    user: str
+    term: int
+    name: str
 
 
 @router.post("/save")
