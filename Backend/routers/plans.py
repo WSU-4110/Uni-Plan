@@ -13,7 +13,7 @@ def save_courses(courses: CourseList):
             name=courses.name
         )
 
-@router.post("/load")
+@router.get("/load")
 def load_courses(data: LoadPlanRequest):
     return load_courses_from_plan(
         user=data.user,
