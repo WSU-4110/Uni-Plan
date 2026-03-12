@@ -53,7 +53,6 @@ def search_courses(
     SELECT
         s."CRN" AS crn,
         s.term_id AS term_id,
-        c.id as course_id,
         c.subject AS subject,
         c.course_number AS course_number,
         c.title AS title,
@@ -78,8 +77,7 @@ def search_courses(
             LOWER(c.title) LIKE %(q_like)s OR
             LOWER(c.subject) LIKE %(q_like)s OR
             LOWER(c.course_number) LIKE %(q_like)s OR
-            CAST(c.id AS TEXT) LIKE %(q_like)s OR
-            CAST(s."CRN" AS TEXT) LIKE %(q_like)s OR1
+            CAST(s."CRN" AS TEXT) LIKE %(q_like)s OR
             LOWER(COALESCE(c.instructor, '')) LIKE %(q_like)s
         )
     ORDER BY c.subject, c.course_number, s."CRN"
@@ -104,8 +102,7 @@ def search_courses(
     results = []
     for r in rows:
         results.append(
-            {   
-                "courseId": r["course_id"],     #not displayed to users
+            {
                 "subject": r["subject"],
                 "courseNumber": r["course_number"],
                 "courseCode": f"{r['subject']} {r['course_number']}",
