@@ -1,21 +1,24 @@
-import os
+from db import get_conn
 
-# Read users from users.txt
 def get_users():
-    users = {}
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
 
-    users_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "users.txt"
-    )    
-    with open(users_path, "r") as file:
-        for line in file:
-            line = line.strip()
+        cur.execute(
+            """
+            SELECT id, password_hash
+            FROM "user"
+            """
+        )
 
-            if not line:
-                continue
+        rows = cur.fetchall()
 
-            username, hashed = line.split(":", 1)
-            users[username] = hashed
+        users = {}
+        for row in rows:
+            users[row["id"]] = row["password_hash"]
 
-    return users
+        return users
+
+    finally:
+        conn.close()
