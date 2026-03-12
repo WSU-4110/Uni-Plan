@@ -25,12 +25,12 @@ function MySchedule({ courses, onRemove, totalCredits, onSave, saveStatus }) {
             }`}
           >
             {saveStatus === "saving"
-              ? "저장 중..."
+              ? "Saving..."
               : saveStatus === "saved"
-              ? "저장됨 ✓"
+              ? "Saved ✓"
               : saveStatus === "error"
-              ? "저장 실패"
-              : "저장하기"}
+              ? "Save Failed"
+              : "Save"}
           </button>
         </div>
       </div>
