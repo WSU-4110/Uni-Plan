@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from routers.courses import router as courses_router
-from routers.user_data import router as saves_router
+from routers.plans import router as saves_router
 from fastapi.middleware.cors import CORSMiddleware
 from auth import verify_password
 import os
@@ -85,4 +85,5 @@ app.include_router(courses_router, prefix="/api/courses")
 def root():
     return {"message": "FastAPI backend is running"}
 
-app.include_router(saves_router, prefix="/api/save")
+app.include_router(saves_router, prefix="/api/plans")
+

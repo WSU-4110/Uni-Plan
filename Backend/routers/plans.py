@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query
 from db import get_conn
 from main import CourseList
+from routers.courses import search_courses
 
 router = APIRouter()
 
@@ -25,3 +26,25 @@ def save_courses(courses: CourseList):
         conn.close()
 
     return {"received": courses.course_ids}
+
+
+
+
+@router.get("/load")
+def load_courses(student_id: str, name : str):
+
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+
+        sql = "SELECT id FROM plan  WHERE student_id = %s AND name = %s"
+        cur.execute(sql,(student_id, name))
+
+        result = cur.fetchall()
+
+        return {"courses": result}
+    
+    finally:
+        conn.close()
+
+    return {}
