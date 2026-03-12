@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query
-from schemas.plan_schema import CourseList, LoadPlanRequest
+from schemas.plan_schema import CourseList
 from services.plan_service import save_courses_to_plan,load_courses_from_plan
 
 router = APIRouter()
@@ -14,9 +14,9 @@ def save_courses(courses: CourseList):
         )
 
 @router.get("/load")
-def load_courses(data: LoadPlanRequest):
+def load_courses(user: str, term: int, name: str):
     return load_courses_from_plan(
-        user=data.user,
-        term=data.term,
-        name=data.name
+        user=user,
+        term=term,
+        name=name
     )
