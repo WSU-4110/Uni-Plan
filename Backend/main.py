@@ -20,7 +20,6 @@ app.add_middleware(
 def root():
     return {"message": "FastAPI backend is running"}
 
-
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(courses_router, prefix="/api/courses")
 app.include_router(plans_router, prefix="/api/plans")
