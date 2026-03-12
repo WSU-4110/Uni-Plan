@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query
 from db import get_conn
 from main import CourseList
-from routers.courses import search_courses
+from routers.courses import days_str, format_location, format_time_range
 
 router = APIRouter()
 
@@ -42,9 +42,61 @@ def load_courses(student_id: str, name : str):
 
         result = cur.fetchall()
 
-        return {"courses": result}
+        course_ids = [r["id"] for r in result]
+
+        if not course_ids:
+            return {"results": []}
     
+        # query the courses
+        sql = """
+        SELECT
+            s."CRN" AS crn,
+            s.term_id AS term_id,
+            c.id AS course_id,
+            c.subject,
+            c.course_number,
+            c.title,
+            c.credit_hours,
+            c.instructor,
+            c.building,
+            c.room_number,
+            t.monday,
+            t.tuesday,
+            t.wednesday,
+            t.thursday,
+            t.friday,
+            t.start_min,
+            t.end_min
+        FROM section s
+        JOIN course c ON c.id = s.course_id
+        LEFT JOIN time_slot t ON t.id = c.id
+        WHERE c.id = ANY(%s)
+        ORDER BY c.subject, c.course_number
+        """
+
+        cur.execute(sql, (course_ids,))
+        rows = cur.fetchall()
+
     finally:
         conn.close()
 
-    return {}
+    results = []
+    for r in rows:
+        results.append(
+            {
+                "courseId": r["course_id"],
+                "subject": r["subject"],
+                "courseNumber": r["course_number"],
+                "courseCode": f"{r['subject']} {r['course_number']}",
+                "crn": str(r["crn"]),
+                "term": str(r["term_id"]),
+                "name": r["title"],
+                "credits": r["credit_hours"],
+                "instructor": r["instructor"] or "TBA",
+                "days": days_str(r),
+                "time": format_time_range(r),
+                "location": format_location(r),
+            }
+        )
+
+    return {"results": results}
