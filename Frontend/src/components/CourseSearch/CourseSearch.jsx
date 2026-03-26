@@ -3,8 +3,15 @@ import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import CourseDetails from "../CourseDetails/CourseDetails";
 import { findConflictingCourses } from "../../utils/courseUtils";
 
+const TERM_ID = {
+  "Spring/Summer 2026": 2261,
+  "Fall 2026": 2270,
+};
+
 const MOCK_COURSES = [
   {
+    courseId: 1,
+    termId: TERM_ID["Spring/Summer 2026"],
     name: "Intro to Computer Science",
     crn: "12345",
     subject: "CSC",
@@ -26,6 +33,8 @@ const MOCK_COURSES = [
     room: "0150",
   },
   {
+    courseId: 2,
+    termId: TERM_ID["Fall 2026"],
     name: "Database",
     crn: "67890",
     subject: "CSC",
@@ -46,6 +55,8 @@ const MOCK_COURSES = [
     room: "3209",
   },
   {
+    courseId: 3,
+    termId: TERM_ID["Spring/Summer 2026"],
     name: "Calculus I",
     crn: "11111",
     subject: "MATH",
@@ -66,6 +77,8 @@ const MOCK_COURSES = [
     room: "1209",
   },
   {
+    courseId: 4,
+    termId: TERM_ID["Fall 2026"],
     name: "English Composition",
     crn: "22222",
     subject: "ENG",
@@ -86,6 +99,8 @@ const MOCK_COURSES = [
     room: "0171",
   },
   {
+    courseId: 5,
+    termId: TERM_ID["Spring/Summer 2026"],
     name: "Physics I",
     crn: "33333",
     subject: "PHY",
@@ -106,6 +121,8 @@ const MOCK_COURSES = [
     room: "1117",
   },
   {
+    courseId: 6,
+    termId: TERM_ID["Fall 2026"],
     name: "Algorithms",
     crn: "44444",
     subject: "CSC",
@@ -126,6 +143,8 @@ const MOCK_COURSES = [
     room: "2216",
   },
   {
+    courseId: 7,
+    termId: TERM_ID["Spring/Summer 2026"],
     name: "Software Engineering",
     crn: "55555",
     subject: "CSC",
@@ -146,6 +165,8 @@ const MOCK_COURSES = [
     room: "3105",
   },
   {
+    courseId: 8,
+    termId: TERM_ID["Spring/Summer 2026"],
     name: "Calculus II",
     crn: "66666",
     subject: "MATH",
@@ -166,6 +187,8 @@ const MOCK_COURSES = [
     room: "1410",
   },
   {
+    courseId: 9,
+    termId: TERM_ID["Spring/Summer 2026"],
     name: "Physics II",
     crn: "77777",
     subject: "PHY",

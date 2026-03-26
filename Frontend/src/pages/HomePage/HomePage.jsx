@@ -9,6 +9,7 @@ import wayneLogo from "../../assets/images/wayneLogo.png";
 function HomePage() {
   const [registered, setRegistered] = useState([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("idle");
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
@@ -22,8 +23,39 @@ function HomePage() {
     setRegistered((prev) => prev.filter((c) => c.crn !== course.crn));
   };
 
+  const handleSavePlan = async () => {
+    if (registered.length === 0) return;
+
+    const userId = localStorage.getItem("userId");
+    const termId = registered[0].termId;
+    const courseIds = registered.map((c) => c.courseId);
+
+    setSaveStatus("saving");
+    try {
+      const res = await fetch("/api/plans/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          course_ids: courseIds,
+          user: userId,
+          term: termId,
+          name: "My Plan",
+        }),
+      });
+
+      if (!res.ok) throw new Error("Server error");
+
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    } catch {
+      setSaveStatus("error");
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("userId");
     navigate("/login", { replace: true });
   };
 
@@ -109,6 +141,8 @@ function HomePage() {
             courses={registered}
             onRemove={(crn) => handleRemoveCourse({ crn })}
             totalCredits={registered.reduce((sum, c) => sum + (c.credits || 0), 0)}
+            onSave={handleSavePlan}
+            saveStatus={saveStatus}
           />
           <div className="flex-1 min-h-0">
             <WeeklySchedule registered={registered} conflicts={conflicts} />
