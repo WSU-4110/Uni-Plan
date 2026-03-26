@@ -6,7 +6,7 @@ router = APIRouter()
 def days_str(r: dict) -> str:
     """boolean columns -> 'MWF' / 'TR' / 'TBA'"""
 
-    """necessary fot TBA to appear when no days, see test_days.py"""
+    """necessary for TBA to appear when no days, see test_days.py"""
     if not r:
         return "TBA"
     
