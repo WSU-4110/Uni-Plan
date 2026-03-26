@@ -20,7 +20,7 @@ def test_api_success():
 def test_login_failure():
     payload = {"username": "testuser", "password": "wrongpassword"}
     
-    response = client.post("/login", json=payload)
+    response = client.post("/api/auth/login", json=payload)
     
     assert response.status_code == 200
     assert response.json()["success"] is False
