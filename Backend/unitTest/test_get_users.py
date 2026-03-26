@@ -1,31 +1,32 @@
 import pytest
-from unittest.mock import MagicMock
-
 from Backend.services.auth_service import get_users
 
 class TestUserFunctions:
 
-
     def test_get_users_returns_dict(self, mocker):
-        # Case 1: Returns a {id: hash} dict from DB
-        mock_conn = mocker.patch("your_module.get_conn")
+        mock_conn = mocker.patch("Backend.services.auth_service.get_conn")
         mock_cur = mock_conn.return_value.cursor.return_value
-        
-        # Simulate DB returning rows
+
         mock_cur.fetchall.return_value = [
-            {"id": 1, "password_hash": "hash_one"},
-            {"id": 2, "password_hash": "hash_two"}
+            {"id": 'habib', "password_hash": "$2b$12$c4PMr1xigoksIGa/tSLmB.S0LkCFMwkS/tEASixNiEBSjtHVN.tpS"},
+            {"id": 'nahyun', "password_hash": "$2b$12$Nk5UWw6ElE78DaNwmYxgRetxVBi8BZzgV8AmajJSXEybJWC2B6un."}
         ]
-        
+
         result = get_users()
-        assert result == {1: "hash_one", 2: "hash_two"}
+
+        assert result == {
+            "habib": "$2b$12$c4PMr1xigoksIGa/tSLmB.S0LkCFMwkS/tEASixNiEBSjtHVN.tpS",
+            "nahyun": "$2b$12$Nk5UWw6ElE78DaNwmYxgRetxVBi8BZzgV8AmajJSXEybJWC2B6un."
+        }
+
         mock_conn.return_value.close.assert_called_once()
 
     def test_get_users_empty_db(self, mocker):
-        # Case 2: Empty DB result -> empty dict
-        mock_conn = mocker.patch("your_module.get_conn")
+        mock_conn = mocker.patch("Backend.services.auth_service.get_conn")
         mock_cur = mock_conn.return_value.cursor.return_value
         mock_cur.fetchall.return_value = []
-        
+
         result = get_users()
+
         assert result == {}
+        mock_conn.return_value.close.assert_called_once()

@@ -7,7 +7,7 @@ class TestLoadFunctions:
 
     def test_load_courses_no_plan(self, mocker):
         # Case 5: No matching plan -> {"results": []}
-        mock_load = mocker.patch("your_module.load_courses_from_plan")
+        mock_load = mocker.patch("Backend.routers.plans.load_courses_from_plan")
         mock_load.return_value = {"results": []}
         
         result = load_courses(user="test_user", term=2024, name="my_plan")
@@ -15,7 +15,7 @@ class TestLoadFunctions:
 
     def test_load_courses_has_course_code(self, mocker):
         # Case 6: Returned items contain a courseCode field
-        mock_load = mocker.patch("your_module.load_courses_from_plan")
+        mock_load = mocker.patch("Backend.routers.plans.load_courses_from_plan")
         mock_load.return_value = {
             "results": [{"courseCode": "CS50", "title": "Intro to CS"}]
         }
