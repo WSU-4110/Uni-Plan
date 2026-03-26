@@ -1,43 +1,41 @@
 from auth import hash_password, verify_password
 
 
-# 1. Hash should NOT equal original password
-def test_hash_password_changes_value():
-    password = "mypassword"
-    hashed = hash_password(password)
-    assert hashed != password
-
-
-# 2. Hash should return a string
-def test_hash_password_returns_string():
+# 1. hash_password → result is non-empty string
+def test_hash_password_not_empty():
     hashed = hash_password("mypassword")
     assert isinstance(hashed, str)
+    assert len(hashed) > 0
 
 
-# 3. Correct password should verify TRUE
-def test_verify_password_success():
+# 2. verify_password → correct password returns True
+def test_verify_password_correct():
     password = "mypassword"
     hashed = hash_password(password)
     assert verify_password(password, hashed) == True
 
 
-# 4. Wrong password should verify FALSE
-def test_verify_password_fail():
+# 3. verify_password → wrong password returns False
+def test_verify_password_wrong():
     password = "mypassword"
     hashed = hash_password(password)
     assert verify_password("wrongpassword", hashed) == False
 
 
-# 5. Empty password test
+# 4. empty password test
 def test_empty_password():
     password = ""
     hashed = hash_password(password)
     assert verify_password("", hashed) == True
 
 
-# 6. Same password should produce DIFFERENT hashes (bcrypt behavior)
+# 5. hash should always return string
+def test_hash_returns_string():
+    hashed = hash_password("mypassword")
+    assert isinstance(hashed, str)
+
+
+# 6. bcrypt generates different hashes
 def test_hashes_are_different():
     password = "mypassword"
-    hash1 = hash_password(password)
-    hash2 = hash_password(password)
-    assert hash1 != hash2
+    assert hash_password(password) != hash_password(password)
