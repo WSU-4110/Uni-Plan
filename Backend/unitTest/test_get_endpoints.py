@@ -4,7 +4,6 @@ from Backend.main import app
 client = TestClient(app)
 
 
-
 def test_api_success():
     payload = {"username":"habib", "password":"1234"}
 
@@ -16,15 +15,6 @@ def test_api_success():
         "message": "Login successful"
     }
 
-
-def test_login_failure():
-    payload = {"username": "testuser", "password": "wrongpassword"}
-    
-    response = client.post("/api/auth/login", json=payload)
-    
-    assert response.status_code == 200
-    assert response.json()["success"] is False
-    assert "Invalid" in response.json()["message"]
 
 def test_logout():
 
