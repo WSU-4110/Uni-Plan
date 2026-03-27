@@ -1,0 +1,25 @@
+import pytest
+from unittest.mock import MagicMock
+
+from Backend.routers.plans import load_courses
+
+class TestLoadFunctions:
+
+    def test_load_courses_no_plan(self, mocker):
+        # Case 5: No matching plan -> {"results": []}
+        mock_load = mocker.patch("Backend.routers.plans.load_courses_from_plan")
+        mock_load.return_value = {"results": []}
+        
+        result = load_courses(user="test_user", term=2024, name="my_plan")
+        assert result == {"results": []}
+
+    def test_load_courses_has_course_code(self, mocker):
+        # Case 6: Returned items contain a courseCode field
+        mock_load = mocker.patch("Backend.routers.plans.load_courses_from_plan")
+        mock_load.return_value = {
+            "results": [{"courseCode": "CS50", "title": "Intro to CS"}]
+        }
+        
+        result = load_courses(user="test_user", term=2024, name="my_plan")
+        assert len(result["results"]) > 0
+        assert "courseCode" in result["results"][0]

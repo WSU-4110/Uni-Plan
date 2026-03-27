@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
-from schemas.plan_schema import CourseList
-from services.plan_service import save_courses_to_plan,load_courses_from_plan
+from Backend.schemas.plan_schema import CourseList
+from Backend.services.plan_service import save_courses_to_plan,load_courses_from_plan
 
 router = APIRouter()
 

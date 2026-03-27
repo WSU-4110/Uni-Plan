@@ -1,4 +1,4 @@
-from db import get_conn
+from Backend.db import get_conn
 
 def get_users():
     conn = get_conn()

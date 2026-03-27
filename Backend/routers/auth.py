@@ -1,11 +1,11 @@
 from fastapi import APIRouter
-from schemas.auth_schema import LoginRequest
-from services.auth_service import get_users
-from auth import verify_password
+from Backend.schemas.auth_schema import LoginRequest
+from Backend.services.auth_service import get_users
+from Backend.auth import verify_password
 
 router = APIRouter()
 
-@router.get("/login")
+@router.post("/login")
 def login(data: LoginRequest):
     users = get_users()
 
