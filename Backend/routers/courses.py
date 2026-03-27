@@ -1,10 +1,16 @@
 from fastapi import APIRouter, Query
 from Backend.db import get_conn
 
+
 router = APIRouter()
 
 def days_str(r: dict) -> str:
     """boolean columns -> 'MWF' / 'TR' / 'TBA'"""
+
+    """necessary for TBA to appear when no days, see test_days.py"""
+    if not r:
+        return "TBA"
+    
     out = ""
     if r.get("monday"):
         out += "M"
