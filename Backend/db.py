@@ -7,7 +7,7 @@ load_dotenv()
 
 def get_conn():
     conn = psycopg2.connect(
-        os.getenv("DATABASE_URL"),
+        os.getenv("DATABASE_URL", "").strip(),
         cursor_factory=psycopg2.extras.RealDictCursor
     )
     return conn
