@@ -14,37 +14,50 @@ export default function ExportButton({ myScheduleRef, weeklyScheduleRef }) {
             const container = document.createElement("div");
             container.style.padding = "20px";
             container.style.backgroundColor = "white";
-            container.style.width = "100%";
+            container.style.width = "11in"; // better page fit for landscape
+            container.style.maxWidth = "none";
             container.style.fontFamily = "Arial, sans-serif";
+            container.style.fontSize = "13px"; // slightly larger for readability
+            container.style.boxSizing = "border-box";
+
+            // scaling wrappers to ensure content fits on page
+            const scaleWrapper = document.createElement("div");
+            scaleWrapper.style.transform = "scale(0.75)"; // smaller element size for PDF fit
+            scaleWrapper.style.transformOrigin = "top left";
+            scaleWrapper.style.width = "100%";
+            scaleWrapper.style.margin = "0 auto";
 
             // Clone and add My Schedule
             const myScheduleClone = myScheduleRef.current.cloneNode(true);
             myScheduleClone.style.width = "100%";
             myScheduleClone.style.marginBottom = "30px";
-            container.appendChild(myScheduleClone);
 
             // Clone and add Weekly Schedule (no page break - both on same page)
             const weeklyScheduleClone = weeklyScheduleRef.current.cloneNode(true);
             weeklyScheduleClone.style.width = "100%";
             weeklyScheduleClone.style.marginTop = "10px";
-            container.appendChild(weeklyScheduleClone);
+
+            scaleWrapper.appendChild(myScheduleClone);
+            scaleWrapper.appendChild(weeklyScheduleClone);
+            container.appendChild(scaleWrapper);
 
             // Temporarily attach to document for rendering
             document.body.appendChild(container);
 
+            //PDF options - adjusted for better fit and quality
             const options = {
                 margin: 0.3, // Smaller margins to fit more content
                 filename: "my_schedule.pdf",
                 html2canvas: {
-                    scale: 1.5, // Slightly lower scale for better fit
+                    scale: 2,
                     useCORS: true,
                     allowTaint: true,
                     backgroundColor: '#ffffff'
                 },
                 jsPDF: {
                     unit: "in",
-                    format: "a3", // Larger format to fit both schedules
-                    orientation: "portrait"
+                    format: "letter",
+                    orientation: "landscape" // wider page
                 },
             };
 

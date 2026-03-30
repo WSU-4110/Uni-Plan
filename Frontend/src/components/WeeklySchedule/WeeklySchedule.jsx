@@ -138,16 +138,16 @@ const WeeklySchedule = forwardRef(({ registered, conflicts = new Set(), mySchedu
                       }}
                       title={`${isConflict ? "⚠ TIME CONFLICT\n" : ""}${course.courseCode} — ${course.name}\n${formatDisplayTime(start24)} – ${formatDisplayTime(end24)}${location ? `\n${location}` : ""}`}
                     >
-                      <div className="p-1 text-white leading-tight">
-                        <div className="text-[10px] font-semibold truncate flex items-center gap-0.5">
+                      <div className="p-1 text-white leading-tight break-words whitespace-normal">
+                        <div className="text-[10px] font-semibold flex flex-wrap items-center gap-0.5 break-words whitespace-normal">
                           {isConflict && <span>⚠</span>}
                           {course.courseCode}
                         </div>
-                        <div className="text-[9px] opacity-90 truncate">
+                        <div className="text-[9px] opacity-90 break-words whitespace-normal">
                           {formatDisplayTime(start24)}
                         </div>
                         {location && (
-                          <div className="text-[9px] opacity-80 truncate">{location}</div>
+                          <div className="text-[9px] opacity-80 break-words whitespace-normal">{location}</div>
                         )}
                       </div>
                     </div>

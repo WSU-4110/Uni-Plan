@@ -49,12 +49,11 @@ function MySchedule({ courses, onRemove, totalCredits, onSave, saveStatus }, ref
               className="flex items-center justify-between gap-2 p-2.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-md"
             >
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[#1e293b] truncate">
+                <p className="text-sm font-medium text-[#1e293b] break-words whitespace-normal">
                   {course.name}
                 </p>
-                <p className="text-xs text-[#64748b]">
-                  {course.courseCode} · {course.credits} cr · {course.meetingDays}{" "}
-                  {course.meetingTime}
+                <p className="text-xs text-[#64748b] break-words whitespace-normal">
+                  {course.courseCode} · {course.credits} cr · {course.meetingDays} {course.meetingTime}
                 </p>
               </div>
               <button
