@@ -1,3 +1,5 @@
+import React, { forwardRef } from "react";
+import ExportButton from "../ExportButton/ExportButton";
 import { parseMeetingDays, parseTo24h, addMinutes, estimateDuration, timeToFloat } from "../../utils/courseUtils";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -24,7 +26,7 @@ function formatDisplayTime(time24) {
   return `${display}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-export default function WeeklySchedule({ registered, conflicts = new Set() }) {
+const WeeklySchedule = forwardRef(({ registered, conflicts = new Set(), myScheduleRef, weeklyScheduleRef }, ref) => {
   const totalCredits = registered.reduce((sum, c) => sum + (c.credits || 0), 0);
   const conflictCount = conflicts.size;
 
@@ -69,15 +71,20 @@ export default function WeeklySchedule({ registered, conflicts = new Set() }) {
   };
 
   return (
-    <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm flex flex-col h-full">
+    <div ref={ref} className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm flex flex-col h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b border-[#e2e8f0] flex items-center justify-between flex-shrink-0">
         <h2 className="text-base font-semibold text-[#1e293b]">Weekly Schedule</h2>
-        {registered.length > 0 && (
-          <span className="text-xs text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full">
-            {registered.length} course{registered.length !== 1 ? "s" : ""}
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {registered.length > 0 && (
+            <span className="text-xs text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full">
+              {registered.length} course{registered.length !== 1 ? "s" : ""}
+            </span>
+          )}
+          {myScheduleRef && weeklyScheduleRef && (
+            <ExportButton myScheduleRef={myScheduleRef} weeklyScheduleRef={weeklyScheduleRef} />
+          )}
+        </div>
       </div>
 
       {/* Grid */}
@@ -171,4 +178,6 @@ export default function WeeklySchedule({ registered, conflicts = new Set() }) {
       </div>
     </div>
   );
-}
+});
+
+export default WeeklySchedule;

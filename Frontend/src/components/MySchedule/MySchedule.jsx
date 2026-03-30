@@ -1,6 +1,8 @@
-function MySchedule({ courses, onRemove, totalCredits, onSave, saveStatus }) {
+import { forwardRef } from "react";
+
+function MySchedule({ courses, onRemove, totalCredits, onSave, saveStatus }, ref) {
   return (
-    <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-4">
+    <div ref={ref} className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-4">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-semibold text-[#1e293b]">My Schedule</h2>
         <div className="flex items-center gap-2">
@@ -69,4 +71,4 @@ function MySchedule({ courses, onRemove, totalCredits, onSave, saveStatus }) {
   );
 }
 
-export default MySchedule;
+export default forwardRef(MySchedule);

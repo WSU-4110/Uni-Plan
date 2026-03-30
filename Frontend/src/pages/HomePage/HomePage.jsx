@@ -11,6 +11,8 @@ function HomePage() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [saveStatus, setSaveStatus] = useState("idle");
   const menuRef = useRef(null);
+  const myScheduleRef = useRef(null);
+  const weeklyScheduleRef = useRef(null);
   const navigate = useNavigate();
 
   const conflicts = useMemo(() => detectConflicts(registered), [registered]);
@@ -138,6 +140,7 @@ function HomePage() {
           style={{ maxHeight: "calc(100vh - 64px - 3rem)" }}
         >
           <MySchedule
+            ref={myScheduleRef}
             courses={registered}
             onRemove={(crn) => handleRemoveCourse({ crn })}
             totalCredits={registered.reduce((sum, c) => sum + (c.credits || 0), 0)}
@@ -145,7 +148,13 @@ function HomePage() {
             saveStatus={saveStatus}
           />
           <div className="flex-1 min-h-0">
-            <WeeklySchedule registered={registered} conflicts={conflicts} />
+            <WeeklySchedule
+              ref={weeklyScheduleRef}
+              registered={registered}
+              conflicts={conflicts}
+              myScheduleRef={myScheduleRef}
+              weeklyScheduleRef={weeklyScheduleRef}
+            />
           </div>
         </div>
       </main>
