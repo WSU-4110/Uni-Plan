@@ -152,8 +152,6 @@ function HomePage() {
               ref={weeklyScheduleRef}
               registered={registered}
               conflicts={conflicts}
-              myScheduleRef={myScheduleRef}
-              weeklyScheduleRef={weeklyScheduleRef}
             />
           </div>
         </div>
