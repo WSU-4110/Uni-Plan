@@ -3,6 +3,11 @@ import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import CourseDetails from "../CourseDetails/CourseDetails";
 import { findConflictingCourses } from "../../utils/courseUtils";
 
+const TERM_MAP = {
+  "Spring/Summer 2026": 202601,
+  "Fall 2026": 202609,
+};
+
 const SORT_OPTIONS = [
   { value: "courseCode", label: "Course Code" },
   { value: "meetingTime", label: "Meeting Time" },
@@ -35,7 +40,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
   const [courseSubject, setCourseSubject] = useState("");
   const [courseNumber, setCourseNumber] = useState("");
   const [crnSearch, setCrnSearch] = useState("");
-  const [termId, setTermId] = useState("");
+  const [term, setTerm] = useState("");
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -64,6 +69,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
 
       const params = new URLSearchParams({ limit: "200" });
       if (q) params.set("q", q);
+      const termId = TERM_MAP[term];
       if (termId) params.set("term_id", termId);
 
       const res = await fetch(`/api/courses/search?${params}`);
@@ -116,9 +122,9 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
     if (filterDays.length) f.push(...filterDays);
     if (filterCredits) f.push(`${filterCredits} credits`);
     if (filterInstructor) f.push(filterInstructor);
-    if (termId) f.push(`Term ${termId}`);
+    if (term) f.push(term);
     return f;
-  }, [filterDays, filterCredits, filterInstructor, termId]);
+  }, [filterDays, filterCredits, filterInstructor, term]);
 
   const results = useMemo(() => {
     return courses.filter((c) => {
@@ -131,7 +137,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
 
   const sortedResults = useMemo(() => sortResults(results, sortBy, sortOrder), [results, sortBy, sortOrder]);
 
-  const showPanel = hasSearched || courseSubject || courseNumber || crnSearch || termId || filterDays.length > 0 || filterCredits || filterInstructor;
+  const showPanel = hasSearched || courseSubject || courseNumber || crnSearch || term || filterDays.length > 0 || filterCredits || filterInstructor;
 
   return (
     <div className="space-y-4">
@@ -151,33 +157,35 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
         <h2 className="text-base font-semibold text-[#1e293b] mb-4">Search Courses</h2>
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            placeholder="Term ID"
-            value={termId}
-            onChange={(e) => setTermId(e.target.value)}
-            onKeyDown={handleKeyDown}
-            aria-label="Term ID"
-            className="sm:w-32 px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
-          />
+          <select
+            id="term-select"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            aria-label="Select term"
+            className="sm:w-52 px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+          >
+            <option value="">All Semesters</option>
+            <option value="Spring/Summer 2026">Spring/Summer 2026</option>
+            <option value="Fall 2026">Fall 2026</option>
+          </select>
 
           <div className="flex flex-wrap items-end gap-2 flex-1">
             <input
               type="text"
-              placeholder="Subject (e.g. CSC)"
+              placeholder="Course Subject"
               value={courseSubject}
               onChange={(e) => setCourseSubject(e.target.value)}
               onKeyDown={handleKeyDown}
-              aria-label="Course subject"
+              aria-label="Search courses"
               className="flex-1 min-w-[8rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
             />
             <input
               type="text"
-              placeholder="Number (e.g. 1010)"
+              placeholder="Course Number"
               value={courseNumber}
               onChange={(e) => setCourseNumber(e.target.value)}
               onKeyDown={handleKeyDown}
-              aria-label="Course number"
+              aria-label="Search courses"
               className="flex-1 min-w-[8rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
             />
             <input
@@ -186,7 +194,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
               value={crnSearch}
               onChange={(e) => setCrnSearch(e.target.value)}
               onKeyDown={handleKeyDown}
-              aria-label="CRN"
+              aria-label="Search courses"
               className="flex-1 min-w-[8rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
             />
             <button
