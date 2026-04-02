@@ -9,8 +9,17 @@ import wayneLogo from "../../assets/images/wayneLogo.png";
 function HomePage() {
   const [registered, setRegistered] = useState([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [planMode, setPlanMode] = useState("save");
+  const [planName, setPlanName] = useState("");
+  const [planTermId, setPlanTermId] = useState("");
+  const [planStatus, setPlanStatus] = useState("");
+  const [planLoading, setPlanLoading] = useState(false);
+
   const menuRef = useRef(null);
   const navigate = useNavigate();
+
+  const username = localStorage.getItem("username") || "";
 
   const conflicts = useMemo(() => detectConflicts(registered), [registered]);
 
@@ -24,7 +33,76 @@ function HomePage() {
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("username");
     navigate("/login", { replace: true });
+  };
+
+  const openSavePlan = () => {
+    setPlanMode("save");
+    setPlanStatus("");
+    setShowPlanModal(true);
+  };
+
+  const openLoadPlan = () => {
+    setPlanMode("load");
+    setPlanStatus("");
+    setShowPlanModal(true);
+  };
+
+  const handleSavePlan = async () => {
+    if (!planName.trim()) { setPlanStatus("Please enter a plan name."); return; }
+    if (!planTermId) { setPlanStatus("Please select a term."); return; }
+
+    setPlanLoading(true);
+    setPlanStatus("");
+    try {
+      const courseIds = registered.map((c) => c.courseId).filter(Boolean);
+      const res = await fetch("/api/plans/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          course_ids: courseIds,
+          user: username,
+          term: parseInt(planTermId),
+          name: planName.trim(),
+        }),
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      setPlanStatus("Plan saved successfully!");
+    } catch (err) {
+      setPlanStatus(err.message || "Failed to save plan.");
+    } finally {
+      setPlanLoading(false);
+    }
+  };
+
+  const handleLoadPlan = async () => {
+    if (!planName.trim()) { setPlanStatus("Please enter a plan name."); return; }
+    if (!planTermId) { setPlanStatus("Please select a term."); return; }
+
+    setPlanLoading(true);
+    setPlanStatus("");
+    try {
+      const params = new URLSearchParams({
+        user: username,
+        term: planTermId,
+        name: planName.trim(),
+      });
+      const res = await fetch(`/api/plans/load?${params}`);
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const data = await res.json();
+      const loaded = data.results ?? [];
+      if (loaded.length === 0) {
+        setPlanStatus("No courses found for this plan.");
+      } else {
+        setRegistered(loaded);
+        setPlanStatus(`Loaded ${loaded.length} course${loaded.length !== 1 ? "s" : ""}.`);
+      }
+    } catch (err) {
+      setPlanStatus(err.message || "Failed to load plan.");
+    } finally {
+      setPlanLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -55,6 +133,21 @@ function HomePage() {
             </h1>
           </div>
 
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openLoadPlan}
+              className="px-3 py-1.5 text-xs font-medium text-white border border-[#2d7a5f] rounded-md hover:bg-[#1a5c45] transition"
+            >
+              Load Plan
+            </button>
+            <button
+              onClick={openSavePlan}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-[#1a5c45] border border-[#2d7a5f] rounded-md hover:bg-[#226b52] transition"
+            >
+              Save Plan
+            </button>
+          </div>
+
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowUserMenu((prev) => !prev)}
@@ -76,7 +169,10 @@ function HomePage() {
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 top-11 w-36 bg-white border border-[#e2e8f0] rounded-lg shadow-lg overflow-hidden z-20">
+              <div className="absolute right-0 top-11 w-44 bg-white border border-[#e2e8f0] rounded-lg shadow-lg overflow-hidden z-20">
+                {username && (
+                  <p className="px-4 py-2 text-xs text-[#64748b] border-b border-[#e2e8f0] truncate">{username}</p>
+                )}
                 <button
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
@@ -89,8 +185,64 @@ function HomePage() {
         </div>
       </header>
 
+      {showPlanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowPlanModal(false)} />
+          <div className="relative z-10 bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
+            <h2 className="text-base font-semibold text-[#1e293b] mb-4">
+              {planMode === "save" ? "Save Plan" : "Load Plan"}
+            </h2>
+
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[#64748b] mb-1">Plan Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. My Fall Schedule"
+                  value={planName}
+                  onChange={(e) => setPlanName(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#64748b] mb-1">Term ID</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 202609"
+                  value={planTermId}
+                  onChange={(e) => setPlanTermId(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+                />
+              </div>
+
+              {planStatus && (
+                <p className={`text-sm px-3 py-2 rounded ${planStatus.includes("success") || planStatus.startsWith("Loaded") ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"}`}>
+                  {planStatus}
+                </p>
+              )}
+
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={planMode === "save" ? handleSavePlan : handleLoadPlan}
+                  disabled={planLoading}
+                  className="flex-1 py-2 bg-[#0F3B2E] hover:bg-[#0a2a20] disabled:opacity-50 text-white text-sm font-medium rounded-md transition"
+                >
+                  {planLoading ? "Please wait…" : planMode === "save" ? "Save" : "Load"}
+                </button>
+                <button
+                  onClick={() => setShowPlanModal(false)}
+                  className="flex-1 py-2 border border-[#e2e8f0] text-[#475569] text-sm font-medium rounded-md hover:bg-[#f8fafc] transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 flex gap-4 px-4 sm:px-6 lg:px-8 py-6 min-h-0">
-        {/* Left: Search section — 55% */}
         <div className="w-[55%] flex-shrink-0 overflow-y-auto">
           <CourseSearch
             registered={registered}
@@ -100,7 +252,6 @@ function HomePage() {
           />
         </div>
 
-        {/* Right: My Schedule + Weekly Schedule */}
         <div
           className="flex-1 sticky top-[calc(64px+1.5rem)] self-start flex flex-col gap-4 overflow-y-auto"
           style={{ maxHeight: "calc(100vh - 64px - 3rem)" }}

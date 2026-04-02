@@ -53,6 +53,7 @@ def search_courses(
     SELECT
         s."CRN" AS crn,
         s.term_id AS term_id,
+        c.id AS course_id,
         c.subject AS subject,
         c.course_number AS course_number,
         c.title AS title,
@@ -103,6 +104,7 @@ def search_courses(
     for r in rows:
         results.append(
             {
+                "courseId": r["course_id"],
                 "subject": r["subject"],
                 "courseNumber": r["course_number"],
                 "courseCode": f"{r['subject']} {r['course_number']}",

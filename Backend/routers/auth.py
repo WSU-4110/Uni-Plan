@@ -5,14 +5,15 @@ from auth import verify_password
 
 router = APIRouter()
 
-@router.get("/login")
+@router.post("/login")
 def login(data: LoginRequest):
     users = get_users()
 
     if data.username in users and verify_password(data.password, users[data.username]):
         return {
             "success": True,
-            "message": "Login successful"
+            "message": "Login successful",
+            "username": data.username
         }
 
     return {
