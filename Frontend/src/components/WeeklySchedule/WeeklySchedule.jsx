@@ -26,7 +26,7 @@ function formatDisplayTime(time24) {
   return `${display}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-const WeeklySchedule = forwardRef(({ registered, conflicts = new Set(), myScheduleRef, weeklyScheduleRef }, ref) => {
+const WeeklySchedule = forwardRef(({ registered, conflicts = new Set() }, ref) => {
   const totalCredits = registered.reduce((sum, c) => sum + (c.credits || 0), 0);
   const conflictCount = conflicts.size;
 
@@ -81,8 +81,8 @@ const WeeklySchedule = forwardRef(({ registered, conflicts = new Set(), mySchedu
               {registered.length} course{registered.length !== 1 ? "s" : ""}
             </span>
           )}
-          {myScheduleRef && weeklyScheduleRef && (
-            <ExportButton myScheduleRef={myScheduleRef} weeklyScheduleRef={weeklyScheduleRef} />
+          {registered.length > 0 && (
+            <ExportButton registered={registered} conflicts={conflicts} />
           )}
         </div>
       </div>
