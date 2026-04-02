@@ -12,7 +12,8 @@ def login(data: LoginRequest):
     if data.username in users and verify_password(data.password, users[data.username]):
         return {
             "success": True,
-            "message": "Login successful"
+            "message": "Login successful",
+            "username": data.username
         }
 
     return {
