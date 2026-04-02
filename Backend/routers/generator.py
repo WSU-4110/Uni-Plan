@@ -3,14 +3,43 @@ from db import get_conn
 
 router = APIRouter()
 
+def days_overlap(a, b):
+    return (
+        (a["monday"] and b["monday"]) or
+        (a["tuesday"] and b["tuesday"]) or
+        (a["wednesday"] and b["wednesday"]) or
+        (a["thursday"] and b["thursday"]) or
+        (a["friday"] and b["friday"])
+    )
+
+def time_overlap(a, b):
+    return not (a["end_time"] <= b["start_time"] or b["end_time"] <= a["start_time"])
+
+def has_conflict(a, b):
+    if not days_overlap(a["time_slot"], b["time_slot"]):
+        return False
+    return time_overlap(a["time_slot"], b["time_slot"])
+
+def is_valid_addition(schedule, new_section):
+    for existing in schedule:
+        if has_conflict(existing, new_section):
+            return False
+    return True
 
 
+def build_schedules(course_sections, index, current, results, limit=100):
+    if len(results) >= limit:
+        return
 
+    if index == len(course_sections):
+        results.append(current.copy())
+        return
 
-
-
-
-
+    for section in course_sections[index]:
+        if is_valid_addition(current, section):
+            current.append(section)
+            build_schedules(course_sections, index + 1, current, results, limit)
+            current.pop()
 
 
 @router.post("generate-schedules")
@@ -75,7 +104,8 @@ def generate_schedules(request: Request):
                 course_sections.append(formatted)
 
         results = []
-
+        build_schedules(course_sections, 0, [], results, limit=100)
+        
         return {
             "count": len(results),
             "schedules": results
