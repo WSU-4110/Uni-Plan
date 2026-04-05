@@ -174,7 +174,7 @@ function HomePage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowQuickPlanner(true)}
-              className="relative px-3 py-1.5 text-xs font-medium text-white bg-[#C5A334] border border-[#d4b84a] rounded-md hover:bg-[#b59428] transition"
+              className="relative px-3 py-1.5 text-xs font-medium text-white bg-[#2563eb] border border-[#3b82f6] rounded-md hover:bg-[#1d4ed8] transition"
             >
               Quick Planner
               {savedQuickPlans.length > 0 && !showQuickPlanner && (
