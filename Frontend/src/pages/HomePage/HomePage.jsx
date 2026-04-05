@@ -3,8 +3,13 @@ import { useNavigate } from "react-router-dom";
 import CourseSearch from "../../components/CourseSearch/CourseSearch";
 import WeeklySchedule from "../../components/WeeklySchedule/WeeklySchedule";
 import MySchedule from "../../components/MySchedule/MySchedule";
+import QuickPlanner from "../../components/QuickPlanner/QuickPlanner";
 import { detectConflicts } from "../../utils/courseUtils";
 import wayneLogo from "../../assets/images/wayneLogo.png";
+
+function getQuickPlanStorageKey(user) {
+  return `quickPlans_${user}`;
+}
 
 function HomePage() {
   const [registered, setRegistered] = useState([]);
@@ -15,11 +20,27 @@ function HomePage() {
   const [planTermId, setPlanTermId] = useState("");
   const [planStatus, setPlanStatus] = useState("");
   const [planLoading, setPlanLoading] = useState(false);
+  const [showQuickPlanner, setShowQuickPlanner] = useState(false);
+  const [savedQuickPlans, setSavedQuickPlans] = useState([]);
 
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
   const username = localStorage.getItem("username") || "";
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(getQuickPlanStorageKey(username));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSavedQuickPlans(parsed);
+        }
+      }
+    } catch (_e) {
+      /* ignore corrupt data */
+    }
+  }, [username]);
 
   const conflicts = useMemo(() => detectConflicts(registered), [registered]);
 
@@ -105,6 +126,23 @@ function HomePage() {
     }
   };
 
+  const handleSaveQuickPlans = (plans) => {
+    setSavedQuickPlans(plans);
+    try {
+      localStorage.setItem(
+        getQuickPlanStorageKey(username),
+        JSON.stringify(plans)
+      );
+    } catch (_e) {
+      /* storage full — silent fail */
+    }
+  };
+
+  const handleApplyQuickPlan = (plan) => {
+    setRegistered(plan);
+    setShowQuickPlanner(false);
+  };
+
   useEffect(() => {
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -134,6 +172,15 @@ function HomePage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowQuickPlanner(true)}
+              className="relative px-3 py-1.5 text-xs font-medium text-white bg-[#C5A334] border border-[#d4b84a] rounded-md hover:bg-[#b59428] transition"
+            >
+              Quick Planner
+              {savedQuickPlans.length > 0 && !showQuickPlanner && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full border border-white" />
+              )}
+            </button>
             <button
               onClick={openLoadPlan}
               className="px-3 py-1.5 text-xs font-medium text-white border border-[#2d7a5f] rounded-md hover:bg-[#1a5c45] transition"
@@ -266,6 +313,15 @@ function HomePage() {
           </div>
         </div>
       </main>
+
+      {showQuickPlanner && (
+        <QuickPlanner
+          onClose={() => setShowQuickPlanner(false)}
+          onApplyPlan={handleApplyQuickPlan}
+          savedPlans={savedQuickPlans}
+          onSavePlans={handleSaveQuickPlans}
+        />
+      )}
     </div>
   );
 }
