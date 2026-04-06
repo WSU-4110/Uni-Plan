@@ -5,10 +5,10 @@ export default function ErrorMessage({ message, onClose, type = "error" }) {
 
   useEffect(() => {
     if (!message) {
-      setVisible(false);
+      queueMicrotask(() => setVisible(false));
       return;
     }
-    setVisible(true);
+    queueMicrotask(() => setVisible(true));
     const hide = setTimeout(() => setVisible(false), 4700);
     const close = setTimeout(() => onClose?.(), 5000);
     return () => {

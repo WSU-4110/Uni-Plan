@@ -99,7 +99,7 @@ export default function QuickPlanner({
       if (!res.ok) throw new Error("Search failed");
       const data = await res.json();
       setSearchResults((data.results ?? []).map(normalizeCourse));
-    } catch (_err) {
+    } catch {
       setSearchResults([]);
     } finally {
       setSearchLoading(false);
