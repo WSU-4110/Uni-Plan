@@ -43,8 +43,9 @@ const SLOT_PX = 28;
 function MiniWeekGrid({ plan, accentClass }) {
   const timeLabels = [];
   for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
+    const period = hour >= 12 ? "PM" : "AM";
     const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    timeLabels.push(`${display}${hour < 12 ? "a" : "p"}`);
+    timeLabels.push(`${display}:00 ${period}`);
   }
 
   const getCourseBlocks = (day) => {
@@ -77,12 +78,12 @@ function MiniWeekGrid({ plan, accentClass }) {
       className={`rounded-lg border-2 overflow-hidden bg-white ${accentClass}`}
     >
       <div className="flex min-w-0" style={{ minHeight: `${9 + timeLabels.length * SLOT_PX}px` }}>
-        <div className="flex-shrink-0 w-10">
+        <div className="flex-shrink-0 w-[3.75rem] sm:w-14">
           <div className="h-7 border-b-2 border-[#cbd5e1] bg-[#f1f5f9]" />
           {timeLabels.map((label, i) => (
             <div
               key={i}
-              className="flex items-start justify-end pr-1 text-[10px] font-medium text-[#475569] border-b border-[#e2e8f0] leading-tight"
+              className="flex items-start justify-end pr-1 text-[9px] sm:text-[10px] font-medium text-[#475569] border-b border-[#e2e8f0] leading-tight"
               style={{ height: `${SLOT_PX}px` }}
             >
               {label}
