@@ -11,11 +11,23 @@ function getQuickPlanStorageKey(user) {
   return `quickPlans_${user}`;
 }
 
+function getLastPlanKey(user) {
+  return `lastPlan_${user}`;
+}
+
+function normalizeCourse(raw) {
+  return {
+    ...raw,
+    number: raw.courseNumber ?? raw.number ?? "",
+    meetingDays: raw.days ?? raw.meetingDays ?? "TBA",
+    meetingTime: raw.time ?? raw.meetingTime ?? "TBA",
+  };
+}
+
 function HomePage() {
   const [registered, setRegistered] = useState([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
-  const [planMode, setPlanMode] = useState("save");
   const [planName, setPlanName] = useState("");
   const [planTermId, setPlanTermId] = useState("");
   const [planStatus, setPlanStatus] = useState("");
@@ -37,9 +49,46 @@ function HomePage() {
           setSavedQuickPlans(parsed);
         }
       }
-    } catch (_e) {
+    } catch {
       /* ignore corrupt data */
     }
+  }, [username]);
+
+  useEffect(() => {
+    if (!username) return;
+    const autoLoad = async () => {
+      // 1) Try loading from server using saved plan info
+      try {
+        const planInfo = localStorage.getItem(getLastPlanKey(username));
+        if (planInfo) {
+          const { name, term } = JSON.parse(planInfo);
+          if (name && term) {
+            const params = new URLSearchParams({ user: username, term, name });
+            const res = await fetch(`/api/plans/load?${params}`);
+            if (res.ok) {
+              const data = await res.json();
+              const loaded = (data.results ?? []).map(normalizeCourse);
+              if (loaded.length > 0) {
+                setRegistered(loaded);
+                return;
+              }
+            }
+          }
+        }
+      } catch { /* fall through to cache */ }
+
+      // 2) Fallback: restore from localStorage cache
+      try {
+        const cached = localStorage.getItem(`schedule_${username}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setRegistered(parsed);
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    autoLoad();
   }, [username]);
 
   const conflicts = useMemo(() => detectConflicts(registered), [registered]);
@@ -59,16 +108,10 @@ function HomePage() {
   };
 
   const openSavePlan = () => {
-    setPlanMode("save");
     setPlanStatus("");
     setShowPlanModal(true);
   };
 
-  const openLoadPlan = () => {
-    setPlanMode("load");
-    setPlanStatus("");
-    setShowPlanModal(true);
-  };
 
   const handleSavePlan = async () => {
     if (!planName.trim()) { setPlanStatus("Please enter a plan name."); return; }
@@ -90,6 +133,16 @@ function HomePage() {
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       setPlanStatus("Plan saved successfully!");
+      try {
+        localStorage.setItem(
+          getLastPlanKey(username),
+          JSON.stringify({ name: planName.trim(), term: planTermId })
+        );
+        localStorage.setItem(
+          `schedule_${username}`,
+          JSON.stringify(registered)
+        );
+      } catch { /* ignore */ }
     } catch (err) {
       setPlanStatus(err.message || "Failed to save plan.");
     } finally {
@@ -97,34 +150,6 @@ function HomePage() {
     }
   };
 
-  const handleLoadPlan = async () => {
-    if (!planName.trim()) { setPlanStatus("Please enter a plan name."); return; }
-    if (!planTermId) { setPlanStatus("Please select a term."); return; }
-
-    setPlanLoading(true);
-    setPlanStatus("");
-    try {
-      const params = new URLSearchParams({
-        user: username,
-        term: planTermId,
-        name: planName.trim(),
-      });
-      const res = await fetch(`/api/plans/load?${params}`);
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      const data = await res.json();
-      const loaded = data.results ?? [];
-      if (loaded.length === 0) {
-        setPlanStatus("No courses found for this plan.");
-      } else {
-        setRegistered(loaded);
-        setPlanStatus(`Loaded ${loaded.length} course${loaded.length !== 1 ? "s" : ""}.`);
-      }
-    } catch (err) {
-      setPlanStatus(err.message || "Failed to load plan.");
-    } finally {
-      setPlanLoading(false);
-    }
-  };
 
   const handleSaveQuickPlans = (plans) => {
     setSavedQuickPlans(plans);
@@ -133,7 +158,7 @@ function HomePage() {
         getQuickPlanStorageKey(username),
         JSON.stringify(plans)
       );
-    } catch (_e) {
+    } catch {
       /* storage full — silent fail */
     }
   };
@@ -180,12 +205,6 @@ function HomePage() {
               {savedQuickPlans.length > 0 && !showQuickPlanner && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full border border-white" />
               )}
-            </button>
-            <button
-              onClick={openLoadPlan}
-              className="px-3 py-1.5 text-xs font-medium text-white border border-[#2d7a5f] rounded-md hover:bg-[#1a5c45] transition"
-            >
-              Load Plan
             </button>
             <button
               onClick={openSavePlan}
@@ -237,7 +256,7 @@ function HomePage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowPlanModal(false)} />
           <div className="relative z-10 bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
             <h2 className="text-base font-semibold text-[#1e293b] mb-4">
-              {planMode === "save" ? "Save Plan" : "Load Plan"}
+              Save Plan
             </h2>
 
             <div className="flex flex-col gap-3">
@@ -271,11 +290,11 @@ function HomePage() {
 
               <div className="flex gap-2 mt-1">
                 <button
-                  onClick={planMode === "save" ? handleSavePlan : handleLoadPlan}
+                  onClick={handleSavePlan}
                   disabled={planLoading}
                   className="flex-1 py-2 bg-[#0F3B2E] hover:bg-[#0a2a20] disabled:opacity-50 text-white text-sm font-medium rounded-md transition"
                 >
-                  {planLoading ? "Please wait…" : planMode === "save" ? "Save" : "Load"}
+                  {planLoading ? "Please wait…" : "Save"}
                 </button>
                 <button
                   onClick={() => setShowPlanModal(false)}
