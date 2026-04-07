@@ -21,8 +21,8 @@ def days_str(r: dict) -> str:
 def minutes_to_time_str(m):
     if m is None:
         return None
-    hour = m // 60
-    minute = m % 60
+    hour = m // 100
+    minute = m % 100
     return f"{hour:02d}:{minute:02d}"
 
 def format_time_range(r: dict) -> str:
