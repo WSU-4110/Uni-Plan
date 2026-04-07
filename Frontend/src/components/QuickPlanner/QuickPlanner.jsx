@@ -1,10 +1,11 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   parseMeetingDays,
   parseTo24h,
   timeToFloat,
   estimateDuration,
 } from "../../utils/courseUtils";
+import ComparePlans from "../ComparePlans/ComparePlans";
 
 const TERM_MAP = {
   "Spring/Summer 2026": 202601,
@@ -86,6 +87,8 @@ export default function QuickPlanner({
   const [hasGenerated, setHasGenerated] = useState(
     Array.isArray(savedPlans) && savedPlans.length > 0
   );
+  const [compareSelection, setCompareSelection] = useState([]);
+  const [showCompare, setShowCompare] = useState(false);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -99,7 +102,7 @@ export default function QuickPlanner({
       if (!res.ok) throw new Error("Search failed");
       const data = await res.json();
       setSearchResults((data.results ?? []).map(normalizeCourse));
-    } catch (_err) {
+    } catch {
       setSearchResults([]);
     } finally {
       setSearchLoading(false);
@@ -174,9 +177,23 @@ export default function QuickPlanner({
       setPageIndex(0);
       setHasGenerated(true);
       setGenerating(false);
+      setCompareSelection([]);
+      setShowCompare(false);
       onSavePlans?.(valid);
     }, 50);
   }, [selectedGroups, preferNoFriday, preferNoMorning, onSavePlans]);
+
+  const toggleCompareIndex = useCallback((globalIdx) => {
+    setCompareSelection((prev) => {
+      if (prev.includes(globalIdx)) return prev.filter((i) => i !== globalIdx);
+      if (prev.length >= 2) return prev;
+      return [...prev, globalIdx];
+    });
+  }, []);
+
+  useEffect(() => {
+    if (compareSelection.length < 2) setShowCompare(false);
+  }, [compareSelection.length]);
 
   const totalPages = Math.ceil(plans.length / PLANS_PER_PAGE);
   const startIdx = pageIndex * PLANS_PER_PAGE;
@@ -187,13 +204,16 @@ export default function QuickPlanner({
     setPageIndex((prev) => (prev + 1 < totalPages ? prev + 1 : 0));
   };
 
+  const canCompare = compareSelection.length === 2;
+  const [idxA, idxB] = canCompare ? compareSelection : [null, null];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto py-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
+      <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[92vh] flex flex-col border border-[#e2e8f0]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e2e8f0] flex-shrink-0">
-          <h2 className="text-lg font-semibold text-[#1e293b]">
+        <div className="flex items-center justify-between px-7 py-4 border-b-2 border-[#e2e8f0] bg-[#fafafa] flex-shrink-0">
+          <h2 className="text-xl font-bold text-[#0f172a]">
             Quick Planner
           </h2>
           <button
@@ -213,7 +233,7 @@ export default function QuickPlanner({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
           {/* 1. Course Selection */}
           <div>
             <h3 className="text-sm font-semibold text-[#1e293b] mb-3">
@@ -350,56 +370,94 @@ export default function QuickPlanner({
           {/* Generated plans display */}
           {hasGenerated && plans.length > 0 && (
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-[#1e293b]">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <h3 className="text-base font-bold text-[#0f172a]">
                   Generated Plans
                 </h3>
-                <span className="text-xs text-[#64748b]">
-                  {plans.length} plan{plans.length !== 1 ? "s" : ""} found
-                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm font-medium text-[#475569]">
+                    {plans.length} plan{plans.length !== 1 ? "s" : ""} found
+                  </span>
+                  {canCompare && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCompare(true)}
+                      className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#152a45] text-white text-sm font-semibold rounded-lg shadow-sm transition"
+                    >
+                      Compare selected
+                    </button>
+                  )}
+                </div>
               </div>
+              <p className="text-sm text-[#64748b] mb-3">
+                Check two plans, then open <span className="font-semibold text-[#334155]">Compare selected</span> to see them side by side.
+              </p>
 
               <div className="space-y-3">
                 {visiblePlans.map((plan, idx) => {
-                  const num = startIdx + idx + 1;
+                  const globalIdx = startIdx + idx;
+                  const num = globalIdx + 1;
                   const credits = plan.reduce(
                     (s, c) => s + (c.credits || 0),
                     0
                   );
+                  const inCompare = compareSelection.includes(globalIdx);
+                  const compareDisabled =
+                    compareSelection.length >= 2 && !inCompare;
                   return (
                     <div
-                      key={startIdx + idx}
-                      className="border border-[#e2e8f0] rounded-lg p-4 bg-[#f8fafc]"
+                      key={globalIdx}
+                      className={`border-2 rounded-xl p-4 transition ${
+                        inCompare
+                          ? "border-[#1e3a5f] bg-[#eff6ff]"
+                          : "border-[#e2e8f0] bg-[#f8fafc]"
+                      }`}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-semibold text-[#0F3B2E]">
-                          Plan {num}
-                        </h4>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-[#64748b]">
-                            {credits} credits
+                      <div className="flex flex-wrap items-start gap-3 mb-3">
+                        <label className="flex items-center gap-2 cursor-pointer select-none shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={inCompare}
+                            disabled={compareDisabled}
+                            onChange={() => toggleCompareIndex(globalIdx)}
+                            className="w-4 h-4 accent-[#1e3a5f] disabled:opacity-40"
+                            aria-label={`Select plan ${num} for comparison`}
+                          />
+                          <span className="text-sm font-semibold text-[#475569]">
+                            Compare
                           </span>
-                          <button
-                            onClick={() => onApplyPlan(plan)}
-                            className="px-3 py-1 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-xs font-medium rounded-md transition"
-                          >
-                            Apply Plan
-                          </button>
+                        </label>
+                        <div className="flex-1 min-w-[12rem] flex flex-wrap items-center justify-between gap-2">
+                          <h4 className="text-base font-bold text-[#0F3B2E]">
+                            Plan {num}
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[#64748b]">
+                              {credits} credits
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onApplyPlan(plan)}
+                              className="px-3 py-1.5 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-semibold rounded-md transition"
+                            >
+                              Apply Plan
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      <ul className="space-y-1">
+                      <ul className="space-y-2 border-t border-[#e2e8f0] pt-3">
                         {plan.map((c) => (
                           <li
                             key={c.crn}
-                            className="flex items-center gap-2 text-sm"
+                            className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm"
                           >
-                            <span className="font-medium text-[#1e293b] whitespace-nowrap">
+                            <span className="font-bold text-[#0f172a] whitespace-nowrap">
                               {c.courseCode}
                             </span>
-                            <span className="text-[#64748b] whitespace-nowrap">
+                            <span className="text-[#475569] whitespace-nowrap">
                               {c.meetingDays} {c.meetingTime}
                             </span>
-                            <span className="text-[#94a3b8] truncate">
+                            <span className="text-[#64748b] text-xs truncate min-w-0">
                               {c.instructor}
                             </span>
                           </li>
@@ -442,6 +500,17 @@ export default function QuickPlanner({
           )}
         </div>
       </div>
+
+      {showCompare && canCompare && (
+        <ComparePlans
+          planA={plans[idxA]}
+          planB={plans[idxB]}
+          planNumberA={idxA + 1}
+          planNumberB={idxB + 1}
+          onClose={() => setShowCompare(false)}
+          onSelectPlan={onApplyPlan}
+        />
+      )}
     </div>
   );
 }
