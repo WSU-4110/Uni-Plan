@@ -20,6 +20,12 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
+# ✅ NEW: Override request model
+class OverrideRequest(BaseModel):
+    username: str
+    password: str
+    action: str
+
 
 # Read users from users.txt
 def get_users():
@@ -53,4 +59,45 @@ def login(data: LoginRequest):
     return {
         "success": False,
         "message": "Invalid username or password"
+    }
+
+
+# ✅ NEW: ADMIN OVERRIDE ENDPOINT (FR-18)
+@app.post("/api/admin/override")
+def admin_override(data: OverrideRequest):
+    users = get_users()
+
+    # check user exists
+    if data.username not in users:
+        return {
+            "success": False,
+            "message": "User not found"
+        }
+
+    # check password
+    if not verify_password(data.password, users[data.username]):
+        return {
+            "success": False,
+            "message": "Invalid credentials"
+        }
+
+    # 🔥 simple admin check (safe, no DB changes)
+    if data.username != "admin1":
+        return {
+            "success": False,
+            "message": "Not authorized"
+        }
+
+    # 🔥 simulate constraint / conflict
+    conflict_detected = True
+
+    if conflict_detected:
+        return {
+            "success": True,
+            "message": f"Conflict detected, but admin override applied for: {data.action}"
+        }
+
+    return {
+        "success": True,
+        "message": "No conflict found"
     }
