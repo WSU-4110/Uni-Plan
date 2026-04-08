@@ -42,6 +42,8 @@ def load_courses_from_plan(user: str, term: int, name: str):
         SELECT
             s."CRN" AS crn,
             s.term_id AS term_id,
+            s.max_reg AS max_reg,
+            s.registered AS registered,
             c.id AS course_id,
             c.subject,
             c.course_number,
@@ -74,6 +76,9 @@ def load_courses_from_plan(user: str, term: int, name: str):
     results = []
 
     for r in rows:
+        max_seats = r["max_reg"] or 0
+        registered_seats = r["registered"] or 0
+
         results.append(
             {
                 "courseId": r["course_id"],
@@ -88,6 +93,9 @@ def load_courses_from_plan(user: str, term: int, name: str):
                 "days": days_str(r),
                 "time": format_time_range(r),
                 "location": format_location(r),
+                "maxSeats": max_seats,
+                "registeredSeats": registered_seats,
+                "availableSeats": max_seats - registered_seats,
             }
         )
 

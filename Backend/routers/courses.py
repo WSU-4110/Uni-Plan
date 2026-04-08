@@ -67,7 +67,9 @@ def search_courses(
         t.thursday AS thursday,
         t.friday AS friday,
         t.start_min AS start_min,
-        t.end_min AS end_min
+        t.end_min AS end_min,
+        s.max_reg AS max_reg,
+        s.registered AS registered
     FROM section s
     JOIN course c ON c.id = s.course_id
     LEFT JOIN time_slot t ON t.id = c.id
@@ -102,6 +104,9 @@ def search_courses(
 
     results = []
     for r in rows:
+        max_seats = r["max_reg"] or 0
+        registered_seats = r["registered"] or 0
+
         results.append(
             {
                 "courseId": r["course_id"],
@@ -116,6 +121,9 @@ def search_courses(
                 "days": days_str(r),
                 "time": format_time_range(r),
                 "location": format_location(r),
+                "maxSeats": max_seats,
+                "registeredSeats": registered_seats,
+                "availableSeats": max_seats - registered_seats,
             }
         )
 
