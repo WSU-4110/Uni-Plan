@@ -1,5 +1,5 @@
-from db import get_conn
-from routers.courses import days_str, format_location, format_time_range
+from Backend.db import get_conn
+from Backend.routers.courses import days_str, format_location, format_time_range
 
 def save_courses_to_plan(course_ids, user, term, name):
 
