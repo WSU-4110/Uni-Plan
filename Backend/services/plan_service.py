@@ -100,3 +100,25 @@ def load_courses_from_plan(user: str, term: int, name: str):
         )
 
     return {"results": results}
+
+
+def load_plans_from_user(user: str):
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+
+        sql = "SELECT DISTINCT name FROM plan WHERE student_id = %s"
+        cur.execute(sql, (user,))
+
+        result = cur.fetchall()
+        planName = [r["name"] for r in result]
+
+        results = [{"planName": r} for r in planName]
+
+        return {"results": results}
+
+    except Exception as e:
+        print("ERROR in load_plans:", e)
+        raise
+    finally:
+        conn.close()
