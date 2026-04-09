@@ -63,7 +63,7 @@ async def generate_schedules(request_data: ScheduleRequest):
             for course in courses:
                 print("Processing course:", course.subject, course.course_number)
                 cur.execute(
-                    "SELECT id FROM course WHERE subject=%s AND course_number=%s",
+                    "SELECT id FROM course WHERE subject=%s AND course_number=%s AND credit_hours > 0",
                     (course.subject, course.course_number)
                 )
                 course_rows = cur.fetchall()
@@ -94,7 +94,6 @@ async def generate_schedules(request_data: ScheduleRequest):
 
                     for s in sections:
                         all_sections.append({
-                            "section_id": s["section_id"],
                             "course_id": course_id,
                             "time_slot": {
                                 "start_min": s.get("start_min"),
