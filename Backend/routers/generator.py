@@ -58,16 +58,16 @@ async def generate_schedules(request_data: ScheduleRequest):
     try:
         # Wrap main logic in a try/except to catch runtime errors
         try:
-            print("Courses received:", courses)  # debug
+            #print("Courses received:", courses)  # debug
 
             for course in courses:
-                print("Processing course:", course.subject, course.course_number)
+                #print("Processing course:", course.subject, course.course_number)
                 cur.execute(
                     "SELECT id FROM course WHERE subject=%s AND course_number=%s AND credit_hours > 0",
                     (course.subject, course.course_number)
                 )
                 course_rows = cur.fetchall()
-                print("course_rows:", course_rows)  # debug
+                #print("course_rows:", course_rows)  # debug
 
                 if not course_rows:
                     continue
@@ -90,10 +90,11 @@ async def generate_schedules(request_data: ScheduleRequest):
                         WHERE c.id = %s;
                     """, (course_id,))
                     sections = cur.fetchall()
-                    print("sections:", sections)  # debug
+                    #print("sections:", sections)  # debug
 
                     for s in sections:
                         all_sections.append({
+
                             "course_id": course_id,
                             "time_slot": {
                                 "start_min": s.get("start_min"),
