@@ -64,8 +64,11 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
     setErrorMessage("");
 
     try {
-      const parts = [courseSubject.trim(), courseNumber.trim(), crnSearch.trim()].filter(Boolean);
-      const q = parts.join(" ");
+      const subj = courseSubject.trim();
+      const num = courseNumber.trim();
+      const crn = crnSearch.trim();
+
+      const q = crn || num || subj;
 
       const params = new URLSearchParams({ limit: "200" });
       if (q) params.set("q", q);
@@ -75,7 +78,13 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
       const res = await fetch(`/api/courses/search?${params}`);
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       const data = await res.json();
-      setCourses((data.results ?? []).map(normalizeCourse));
+
+      let results = (data.results ?? []).map(normalizeCourse);
+      if (subj) results = results.filter((c) => (c.subject || "").toLowerCase().includes(subj.toLowerCase()));
+      if (num) results = results.filter((c) => (c.courseNumber ?? c.number ?? "").toLowerCase().includes(num.toLowerCase()));
+      if (crn) results = results.filter((c) => (c.crn || "").includes(crn));
+
+      setCourses(results);
     } catch (err) {
       setErrorMessage(err.message || "Failed to fetch courses. Please try again.");
       setCourses([]);
