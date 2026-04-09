@@ -3,17 +3,93 @@ import { useNavigate } from "react-router-dom";
 import CourseSearch from "../../components/CourseSearch/CourseSearch";
 import WeeklySchedule from "../../components/WeeklySchedule/WeeklySchedule";
 import MySchedule from "../../components/MySchedule/MySchedule";
+import QuickPlanner from "../../components/QuickPlanner/QuickPlanner";
 import { detectConflicts } from "../../utils/courseUtils";
 import wayneLogo from "../../assets/images/wayneLogo.png";
+
+function getQuickPlanStorageKey(user) {
+  return `quickPlans_${user}`;
+}
+
+function getLastPlanKey(user) {
+  return `lastPlan_${user}`;
+}
+
+function normalizeCourse(raw) {
+  return {
+    ...raw,
+    number: raw.courseNumber ?? raw.number ?? "",
+    meetingDays: raw.days ?? raw.meetingDays ?? "TBA",
+    meetingTime: raw.time ?? raw.meetingTime ?? "TBA",
+  };
+}
 
 function HomePage() {
   const [registered, setRegistered] = useState([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [saveStatus, setSaveStatus] = useState("idle");
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [planName, setPlanName] = useState("");
+  const [planTermId, setPlanTermId] = useState("");
+  const [planStatus, setPlanStatus] = useState("");
+  const [planLoading, setPlanLoading] = useState(false);
+  const [showQuickPlanner, setShowQuickPlanner] = useState(false);
+  const [savedQuickPlans, setSavedQuickPlans] = useState([]);
+
   const menuRef = useRef(null);
-  const myScheduleRef = useRef(null);
-  const weeklyScheduleRef = useRef(null);
   const navigate = useNavigate();
+
+  const username = localStorage.getItem("username") || "";
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(getQuickPlanStorageKey(username));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSavedQuickPlans(parsed);
+        }
+      }
+    } catch {
+      /* ignore corrupt data */
+    }
+  }, [username]);
+
+  useEffect(() => {
+    if (!username) return;
+    const autoLoad = async () => {
+      // 1) Try loading from server using saved plan info
+      try {
+        const planInfo = localStorage.getItem(getLastPlanKey(username));
+        if (planInfo) {
+          const { name, term } = JSON.parse(planInfo);
+          if (name && term) {
+            const params = new URLSearchParams({ user: username, term, name });
+            const res = await fetch(`/api/plans/load?${params}`);
+            if (res.ok) {
+              const data = await res.json();
+              const loaded = (data.results ?? []).map(normalizeCourse);
+              if (loaded.length > 0) {
+                setRegistered(loaded);
+                return;
+              }
+            }
+          }
+        }
+      } catch { /* fall through to cache */ }
+
+      // 2) Fallback: restore from localStorage cache
+      try {
+        const cached = localStorage.getItem(`schedule_${username}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setRegistered(parsed);
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    autoLoad();
+  }, [username]);
 
   const conflicts = useMemo(() => detectConflicts(registered), [registered]);
 
@@ -25,40 +101,71 @@ function HomePage() {
     setRegistered((prev) => prev.filter((c) => c.crn !== course.crn));
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("username");
+    navigate("/login", { replace: true });
+  };
+
+  const openSavePlan = () => {
+    setPlanStatus("");
+    setShowPlanModal(true);
+  };
+
+
   const handleSavePlan = async () => {
-    if (registered.length === 0) return;
+    if (!planName.trim()) { setPlanStatus("Please enter a plan name."); return; }
+    if (!planTermId) { setPlanStatus("Please select a term."); return; }
 
-    const userId = localStorage.getItem("userId");
-    const termId = registered[0].termId;
-    const courseIds = registered.map((c) => c.courseId);
-
-    setSaveStatus("saving");
+    setPlanLoading(true);
+    setPlanStatus("");
     try {
+      const courseIds = registered.map((c) => c.courseId).filter(Boolean);
       const res = await fetch("/api/plans/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           course_ids: courseIds,
-          user: userId,
-          term: termId,
-          name: "My Plan",
+          user: username,
+          term: parseInt(planTermId),
+          name: planName.trim(),
         }),
       });
-
-      if (!res.ok) throw new Error("Server error");
-
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 3000);
-    } catch {
-      setSaveStatus("error");
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      setPlanStatus("Plan saved successfully!");
+      try {
+        localStorage.setItem(
+          getLastPlanKey(username),
+          JSON.stringify({ name: planName.trim(), term: planTermId })
+        );
+        localStorage.setItem(
+          `schedule_${username}`,
+          JSON.stringify(registered)
+        );
+      } catch { /* ignore */ }
+    } catch (err) {
+      setPlanStatus(err.message || "Failed to save plan.");
+    } finally {
+      setPlanLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("userId");
-    navigate("/login", { replace: true });
+
+  const handleSaveQuickPlans = (plans) => {
+    setSavedQuickPlans(plans);
+    try {
+      localStorage.setItem(
+        getQuickPlanStorageKey(username),
+        JSON.stringify(plans)
+      );
+    } catch {
+      /* storage full — silent fail */
+    }
+  };
+
+  const handleApplyQuickPlan = (plan) => {
+    setRegistered(plan);
+    setShowQuickPlanner(false);
   };
 
   useEffect(() => {
@@ -89,6 +196,24 @@ function HomePage() {
             </h1>
           </div>
 
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowQuickPlanner(true)}
+              className="relative px-3 py-1.5 text-xs font-medium text-white bg-[#2563eb] border border-[#3b82f6] rounded-md hover:bg-[#1d4ed8] transition"
+            >
+              Quick Planner
+              {savedQuickPlans.length > 0 && !showQuickPlanner && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full border border-white" />
+              )}
+            </button>
+            <button
+              onClick={openSavePlan}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-[#1a5c45] border border-[#2d7a5f] rounded-md hover:bg-[#226b52] transition"
+            >
+              Save Plan
+            </button>
+          </div>
+
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowUserMenu((prev) => !prev)}
@@ -110,7 +235,10 @@ function HomePage() {
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 top-11 w-36 bg-white border border-[#e2e8f0] rounded-lg shadow-lg overflow-hidden z-20">
+              <div className="absolute right-0 top-11 w-44 bg-white border border-[#e2e8f0] rounded-lg shadow-lg overflow-hidden z-20">
+                {username && (
+                  <p className="px-4 py-2 text-xs text-[#64748b] border-b border-[#e2e8f0] truncate">{username}</p>
+                )}
                 <button
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
@@ -123,8 +251,64 @@ function HomePage() {
         </div>
       </header>
 
+      {showPlanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowPlanModal(false)} />
+          <div className="relative z-10 bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
+            <h2 className="text-base font-semibold text-[#1e293b] mb-4">
+              Save Plan
+            </h2>
+
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[#64748b] mb-1">Plan Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. My Fall Schedule"
+                  value={planName}
+                  onChange={(e) => setPlanName(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#64748b] mb-1">Term ID</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 202609"
+                  value={planTermId}
+                  onChange={(e) => setPlanTermId(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+                />
+              </div>
+
+              {planStatus && (
+                <p className={`text-sm px-3 py-2 rounded ${planStatus.includes("success") || planStatus.startsWith("Loaded") ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"}`}>
+                  {planStatus}
+                </p>
+              )}
+
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={handleSavePlan}
+                  disabled={planLoading}
+                  className="flex-1 py-2 bg-[#0F3B2E] hover:bg-[#0a2a20] disabled:opacity-50 text-white text-sm font-medium rounded-md transition"
+                >
+                  {planLoading ? "Please wait…" : "Save"}
+                </button>
+                <button
+                  onClick={() => setShowPlanModal(false)}
+                  className="flex-1 py-2 border border-[#e2e8f0] text-[#475569] text-sm font-medium rounded-md hover:bg-[#f8fafc] transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 flex gap-4 px-4 sm:px-6 lg:px-8 py-6 min-h-0">
-        {/* Left: Search section — 55% */}
         <div className="w-[55%] flex-shrink-0 overflow-y-auto">
           <CourseSearch
             registered={registered}
@@ -134,30 +318,29 @@ function HomePage() {
           />
         </div>
 
-        {/* Right: My Schedule + Weekly Schedule */}
         <div
           className="flex-1 sticky top-[calc(64px+1.5rem)] self-start flex flex-col gap-4 overflow-y-auto"
           style={{ maxHeight: "calc(100vh - 64px - 3rem)" }}
         >
           <MySchedule
-            ref={myScheduleRef}
             courses={registered}
             onRemove={(crn) => handleRemoveCourse({ crn })}
             totalCredits={registered.reduce((sum, c) => sum + (c.credits || 0), 0)}
-            onSave={handleSavePlan}
-            saveStatus={saveStatus}
           />
           <div className="flex-1 min-h-0">
-            <WeeklySchedule
-              ref={weeklyScheduleRef}
-              registered={registered}
-              conflicts={conflicts}
-              myScheduleRef={myScheduleRef}
-              weeklyScheduleRef={weeklyScheduleRef}
-            />
+            <WeeklySchedule registered={registered} conflicts={conflicts} />
           </div>
         </div>
       </main>
+
+      {showQuickPlanner && (
+        <QuickPlanner
+          onClose={() => setShowQuickPlanner(false)}
+          onApplyPlan={handleApplyQuickPlan}
+          savedPlans={savedQuickPlans}
+          onSavePlans={handleSaveQuickPlans}
+        />
+      )}
     </div>
   );
 }

@@ -5,14 +5,18 @@ from Backend.auth import verify_password
 
 router = APIRouter()
 
-@router.get("/login")
+@router.post("/login")
 def login(data: LoginRequest):
     users = get_users()
 
-    if data.username in users and verify_password(data.password, users[data.username]):
+    user = users.get(data.username)
+
+    if user and verify_password(data.password, user["password_hash"]):
         return {
             "success": True,
-            "message": "Login successful"
+            "message": "Login successful",
+            "username": data.username,
+            "role": user["role"]
         }
 
     return {

@@ -21,8 +21,8 @@ def days_str(r: dict) -> str:
 def minutes_to_time_str(m):
     if m is None:
         return None
-    hour = m // 60
-    minute = m % 60
+    hour = m // 100
+    minute = m % 100
     return f"{hour:02d}:{minute:02d}"
 
 def format_time_range(r: dict) -> str:
@@ -53,6 +53,7 @@ def search_courses(
     SELECT
         s."CRN" AS crn,
         s.term_id AS term_id,
+        c.id AS course_id,
         c.subject AS subject,
         c.course_number AS course_number,
         c.title AS title,
@@ -66,7 +67,9 @@ def search_courses(
         t.thursday AS thursday,
         t.friday AS friday,
         t.start_min AS start_min,
-        t.end_min AS end_min
+        t.end_min AS end_min,
+        s.max_reg AS max_reg,
+        s.registered AS registered
     FROM section s
     JOIN course c ON c.id = s.course_id
     LEFT JOIN time_slot t ON t.id = c.id
@@ -101,8 +104,12 @@ def search_courses(
 
     results = []
     for r in rows:
+        max_seats = r["max_reg"] or 0
+        registered_seats = r["registered"] or 0
+
         results.append(
             {
+                "courseId": r["course_id"],
                 "subject": r["subject"],
                 "courseNumber": r["course_number"],
                 "courseCode": f"{r['subject']} {r['course_number']}",
@@ -114,6 +121,9 @@ def search_courses(
                 "days": days_str(r),
                 "time": format_time_range(r),
                 "location": format_location(r),
+                "maxSeats": max_seats,
+                "registeredSeats": registered_seats,
+                "availableSeats": max_seats - registered_seats,
             }
         )
 

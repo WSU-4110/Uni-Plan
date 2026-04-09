@@ -7,7 +7,7 @@ def get_users():
 
         cur.execute(
             """
-            SELECT id, password_hash
+            SELECT id, password_hash, role
             FROM "user"
             """
         )
@@ -16,7 +16,10 @@ def get_users():
 
         users = {}
         for row in rows:
-            users[row["id"]] = row["password_hash"]
+            users[row["id"]] = {
+                "password_hash": row["password_hash"],
+                "role": row["role"]
+            }
 
         return users
 

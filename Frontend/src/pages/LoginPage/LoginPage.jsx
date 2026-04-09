@@ -29,7 +29,7 @@ function LoginPage() {
 
             if (data.success) {
                 localStorage.setItem("isLoggedIn", "true");
-                localStorage.setItem("userId", username);
+                localStorage.setItem("username", data.username ?? username);
                 navigate("/home", { replace: true });
             } else {
                 setError(data.message || "Invalid username or password");
