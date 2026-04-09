@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, HTTPException
-from services.auth_service import get_users
-from services.plan_service import load_courses_from_plan
+from Backend.services.auth_service import get_users
+from Backend.services.plan_service import load_courses_from_plan
 
 router = APIRouter()
 
