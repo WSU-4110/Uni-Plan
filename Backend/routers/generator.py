@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Request
-from db import get_conn
+from Backend.schemas.generator_schema import Course, ScheduleRequest
+from Backend.db import get_conn
+from psycopg2.extras import RealDictCursor
 
 router = APIRouter()
 
@@ -13,7 +15,9 @@ def days_overlap(a, b):
     )
 
 def time_overlap(a, b):
-    return not (a["end_time"] <= b["start_time"] or b["end_time"] <= a["start_time"])
+    if a["start_min"] is None or b["start_min"] is None:
+        return False
+    return not (a["end_min"] <= b["start_min"] or b["end_min"] <= a["start_min"])
 
 def has_conflict(a, b):
     if not days_overlap(a["time_slot"], b["time_slot"]):
@@ -42,74 +46,81 @@ def build_schedules(course_sections, index, current, results, limit=100):
             current.pop()
 
 
-@router.post("generate-schedules")
-def generate_schedules(request: Request):
-    body = await request.json()
-    courses = body.get("courses", [])
+@router.post("/generate-schedules")
+async def generate_schedules(request_data: ScheduleRequest):
+    courses = request_data.courses
 
     conn = get_conn()
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
 
     course_sections = []
 
     try:
-        for course in courses:
-            subject = course.get("subject")
-            number = course.get("course_number")
+        # Wrap main logic in a try/except to catch runtime errors
+        try:
+            print("Courses received:", courses)  # debug
 
-            cur.execute("""
-                SELECT id FROM course
-                WHERE subject = %s AND course_number = %s
-            """, (subject, number))
+            for course in courses:
+                print("Processing course:", course.subject, course.course_number)
+                cur.execute(
+                    "SELECT id FROM course WHERE subject=%s AND course_number=%s",
+                    (course.subject, course.course_number)
+                )
+                course_rows = cur.fetchall()
+                print("course_rows:", course_rows)  # debug
 
-            row = cur.fetchone()
-            if not row:
-                continue
+                if not course_rows:
+                    continue
 
-            course_id = row["id"]
+                all_sections = []
 
-            cur.execute("""
-                SELECT s.id as section_id,
-                       t.start_time,
-                       t.end_time,
-                       t.monday,
-                       t.tuesday,
-                       t.wednesday,
-                       t.thursday,
-                       t.friday
-                FROM section s
-                JOIN time_slot t ON s.time_slot_id = t.id
-                WHERE s.course_id = %s
-            """, (course_id,))
+                for row in course_rows:
+                    course_id = row["id"]
+                    cur.execute("""
+                        SELECT c.id AS section_id,
+                            t.start_min,
+                            t.end_min,
+                            t.monday,
+                            t.tuesday,
+                            t.wednesday,
+                            t.thursday,
+                            t.friday
+                        FROM course c
+                        JOIN time_slot t ON t.id = c.id
+                        WHERE c.id = %s;
+                    """, (course_id,))
+                    sections = cur.fetchall()
+                    print("sections:", sections)  # debug
 
-            sections = cur.fetchall()
+                    for s in sections:
+                        all_sections.append({
+                            "section_id": s["section_id"],
+                            "course_id": course_id,
+                            "time_slot": {
+                                "start_min": s.get("start_min"),
+                                "end_min": s.get("end_min"),
+                                "monday": s.get("monday"),
+                                "tuesday": s.get("tuesday"),
+                                "wednesday": s.get("wednesday"),
+                                "thursday": s.get("thursday"),
+                                "friday": s.get("friday"),
+                            }
+                        })
 
-            formatted = []
-            for s in sections:
-                formatted.append({
-                    "section_id": s["section_id"],
-                    "course_id": course_id,
-                    "time_slot": {
-                        "start_time": s["start_time"],
-                        "end_time": s["end_time"],
-                        "monday": s["monday"],
-                        "tuesday": s["tuesday"],
-                        "wednesday": s["wednesday"],
-                        "thursday": s["thursday"],
-                        "friday": s["friday"],
-                    }
-                })
+                if all_sections:
+                    course_sections.append(all_sections)
 
-            if formatted:
-                course_sections.append(formatted)
+            results = []
+            build_schedules(course_sections, 0, [], results, limit=100)
 
-        results = []
-        build_schedules(course_sections, 0, [], results, limit=100)
-        
-        return {
-            "count": len(results),
-            "schedules": results
-        }
+            return {
+                "count": len(results),
+                "schedules": results
+            }
+
+        except Exception as e:
+            print("ERROR in generate_schedules:", e)
+            raise  # re-raise so FastAPI still returns 500 but you get console logs
 
     finally:
         cur.close()
