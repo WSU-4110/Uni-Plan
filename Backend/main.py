@@ -4,6 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from auth import verify_password
 import os
 
+# import admin router
+from routes.admin import router as admin_router
+
 app = FastAPI()
 
 # Allow frontend to connect
@@ -19,12 +22,6 @@ app.add_middleware(
 class LoginRequest(BaseModel):
     username: str
     password: str
-
-# ✅ NEW: Override request model
-class OverrideRequest(BaseModel):
-    username: str
-    password: str
-    action: str
 
 
 # Read users from users.txt
@@ -62,42 +59,5 @@ def login(data: LoginRequest):
     }
 
 
-# ✅ NEW: ADMIN OVERRIDE ENDPOINT (FR-18)
-@app.post("/api/admin/override")
-def admin_override(data: OverrideRequest):
-    users = get_users()
-
-    # check user exists
-    if data.username not in users:
-        return {
-            "success": False,
-            "message": "User not found"
-        }
-
-    # check password
-    if not verify_password(data.password, users[data.username]):
-        return {
-            "success": False,
-            "message": "Invalid credentials"
-        }
-
-    # 🔥 simple admin check (safe, no DB changes)
-    if data.username != "admin1":
-        return {
-            "success": False,
-            "message": "Not authorized"
-        }
-
-    # 🔥 simulate constraint / conflict
-    conflict_detected = True
-
-    if conflict_detected:
-        return {
-            "success": True,
-            "message": f"Conflict detected, but admin override applied for: {data.action}"
-        }
-
-    return {
-        "success": True,
-        "message": "No conflict found"
-    }
+# include admin routes
+app.include_router(admin_router)
