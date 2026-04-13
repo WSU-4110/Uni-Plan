@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import CourseDetails from "../CourseDetails/CourseDetails";
 import { findConflictingCourses } from "../../utils/courseUtils";
+import AvailableSeats from "../AvailableSeats/AvailableSeats";
 
 const TERM_MAP = {
   "Spring/Summer 2026": 202601,
@@ -326,7 +327,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
                     {paginatedResults.map((course) => {
                       const hasConflict = conflicts.has(course.crn);
                       return (
-                        <li key={course.crn} className={`bg-white border rounded-lg p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 hover:shadow-md transition ${hasConflict ? "border-red-400 bg-red-50" : "border-[#e2e8f0] hover:border-[#cbd5e1]"}`}>
+                        <li key={course.crn} className={`relative bg-white border rounded-lg p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 hover:shadow-md transition ${hasConflict ? "border-red-400 bg-red-50" : "border-[#e2e8f0] hover:border-[#cbd5e1]"}`}>
                           <div className="flex flex-col gap-2 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-xs font-semibold text-[#0F3B2E] bg-[#d1fae5] px-2 py-0.5 rounded">{course.courseCode}</span>
@@ -348,6 +349,15 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
                               <span className="text-sm text-[#475569]">📍 {course.location}</span>
                             </div>
                           </div>
+
+                          {console.log(course)}
+
+
+
+                          <AvailableSeats 
+                            maxSeats={course.maxSeats} 
+                            availableSeats={course.availableSeats} 
+                            />
 
                           <div className="flex-shrink-0">
                             {isRegistered(course) ? (
