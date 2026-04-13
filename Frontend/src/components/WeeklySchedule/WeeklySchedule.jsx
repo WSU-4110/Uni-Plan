@@ -96,7 +96,7 @@ const WeeklySchedule = forwardRef(({ registered, conflicts = new Set() }, ref) =
             {timeLabels.map((label, i) => (
               <div
                 key={i}
-                className="flex items-start justify-end pr-2 text-[10px] text-[#94a3b8] border-b border-[#f1f5f9]"
+                className="flex items-start justify-end pr-2 text-[10px] text-[#64748B] border-b border-[#f1f5f9]"
                 style={{ height: "52px" }}
               >
                 {label}
