@@ -12,10 +12,6 @@ function getQuickPlanStorageKey(user) {
   return `quickPlans_${user}`;
 }
 
-function getLastPlanKey(user) {
-  return `lastPlan_${user}`;
-}
-
 function normalizeCourse(raw) {
   return {
     ...raw,
@@ -75,7 +71,6 @@ function HomePage() {
     if (!username) return;
 
     const autoLoad = async () => {
-      // Load the student's registered schedule from the server
       try {
         const res = await fetch(`/api/plans/registered?user=${encodeURIComponent(username)}`);
         if (res.ok) {
@@ -83,18 +78,6 @@ function HomePage() {
           const loaded = (data.results ?? []).map(normalizeCourse);
           if (loaded.length > 0) {
             setRegistered(loaded);
-            return;
-          }
-        }
-      } catch { /* fall through */ }
-
-      // Fallback: restore from localStorage cache
-      try {
-        const cached = localStorage.getItem(`schedule_${username}`);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setRegistered(parsed);
           }
         }
       } catch { /* ignore */ }
@@ -145,16 +128,6 @@ function HomePage() {
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       setPlanStatus("Plan saved successfully!");
-      try {
-        localStorage.setItem(
-          getLastPlanKey(username),
-          JSON.stringify({ name: planName.trim(), term: parseInt(planTermId) })
-        );
-        localStorage.setItem(
-          `schedule_${username}`,
-          JSON.stringify(registered)
-        );
-      } catch { /* ignore */ }
     } catch (err) {
       setPlanStatus(err.message || "Failed to save plan.");
     } finally {
@@ -213,9 +186,6 @@ function HomePage() {
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       setRegisterStatus("registered");
-      try {
-        localStorage.setItem(`schedule_${username}`, JSON.stringify(registered));
-      } catch { /* ignore */ }
       setTimeout(() => setRegisterStatus(""), 3000);
     } catch {
       setRegisterStatus("error");
