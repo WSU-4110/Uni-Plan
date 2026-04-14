@@ -45,10 +45,23 @@ def build_schedules(course_sections, index, current, results, limit=100):
             build_schedules(course_sections, index + 1, current, results, limit)
             current.pop()
 
+def violates_constraints(time_slot, blocked_days, startTime):
+    return (
+        (time_slot["start_min"] > startTime) or
+        (time_slot["monday"] and "monday" in blocked_days) or
+        (time_slot["tuesday"] and "tuesday" in blocked_days) or
+        (time_slot["wednesday"] and "wednesday" in blocked_days) or
+        (time_slot["thursday"] and "thursday" in blocked_days) or
+        (time_slot["friday"] and "friday" in blocked_days)
+    )
+
 
 @router.post("/generate-schedules")
 async def generate_schedules(request_data: ScheduleRequest):
     courses = request_data.courses
+    days = request_data.days
+    blocked_days = set(day.lower() for day in days)
+    startTime = request_data.startTime
 
     conn = get_conn()
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -91,20 +104,23 @@ async def generate_schedules(request_data: ScheduleRequest):
                     """, (course_id,))
                     sections = cur.fetchall()
                     #print("sections:", sections)  # debug
-
                     for s in sections:
-                        all_sections.append({
+                        time_slot = {
+                            "start_min": s.get("start_min"),
+                            "end_min": s.get("end_min"),
+                            "monday": s.get("monday"),
+                            "tuesday": s.get("tuesday"),
+                            "wednesday": s.get("wednesday"),
+                            "thursday": s.get("thursday"),
+                            "friday": s.get("friday"),
+                        }
 
+                        if violates_constraints(time_slot, blocked_days, startTime):
+                            continue
+
+                        all_sections.append({
                             "course_id": course_id,
-                            "time_slot": {
-                                "start_min": s.get("start_min"),
-                                "end_min": s.get("end_min"),
-                                "monday": s.get("monday"),
-                                "tuesday": s.get("tuesday"),
-                                "wednesday": s.get("wednesday"),
-                                "thursday": s.get("thursday"),
-                                "friday": s.get("friday"),
-                            }
+                            "time_slot": time_slot
                         })
 
                 if all_sections:

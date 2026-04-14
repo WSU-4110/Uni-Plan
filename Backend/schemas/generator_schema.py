@@ -7,3 +7,5 @@ class Course(BaseModel):
 
 class ScheduleRequest(BaseModel):
     courses: List[Course]
+    days: List[str]
+    startTime: int
