@@ -102,20 +102,23 @@ async def generate_schedules(request_data: ScheduleRequest):
                     """, (course_id,))
                     sections = cur.fetchall()
                     #print("sections:", sections)  # debug
-
                     for s in sections:
-                        all_sections.append({
+                        time_slot = {
+                            "start_min": s.get("start_min"),
+                            "end_min": s.get("end_min"),
+                            "monday": s.get("monday"),
+                            "tuesday": s.get("tuesday"),
+                            "wednesday": s.get("wednesday"),
+                            "thursday": s.get("thursday"),
+                            "friday": s.get("friday"),
+                        }
 
+                        if violates_day_constraints(time_slot, blocked_days):
+                            continue
+
+                        all_sections.append({
                             "course_id": course_id,
-                            "time_slot": {
-                                "start_min": s.get("start_min"),
-                                "end_min": s.get("end_min"),
-                                "monday": s.get("monday"),
-                                "tuesday": s.get("tuesday"),
-                                "wednesday": s.get("wednesday"),
-                                "thursday": s.get("thursday"),
-                                "friday": s.get("friday"),
-                            }
+                            "time_slot": time_slot
                         })
 
                 if all_sections:
