@@ -114,9 +114,10 @@ function LoginPage() {
                         <div className="w-full mb-5 px-5">
                             <div className="flex items-center gap-2 mb-1.5">
                                 <img src={person} className="w-2.5 h-2.5" alt="User icon" />
-                                <label className="block text-base font-semibold text-black">Your Username</label>
+                                <label htmlFor="login-username" className="block text-base font-semibold text-black">Your Username</label>
                             </div>
                             <input
+                                id="login-username"
                                 type="text"
                                 placeholder="Username"
                                 value={username}
@@ -132,9 +133,10 @@ function LoginPage() {
                         <div className="w-full mb-5 px-5">
                             <div className="flex items-center gap-2 mb-1.5">
                                 <img src={lock} className="w-2.5 h-2.5" alt="Lock icon" />
-                                <label className="block text-base font-semibold text-black">Your Password</label>
+                                <label htmlFor="login-password" className="block text-base font-semibold text-black">Your Password</label>
                             </div>
                             <input
+                                id="login-password"
                                 type="password"
                                 placeholder="Password"
                                 value={password}
