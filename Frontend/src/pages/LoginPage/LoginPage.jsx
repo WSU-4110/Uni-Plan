@@ -23,12 +23,13 @@ function LoginPage() {
         event.preventDefault();
         setError("");
         setLoading(true);
+        const normalizedUsername = username.trim();
 
         try {
             const res = await fetch("/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify({ username: normalizedUsername, password }),
             });
 
             const data = await res.json();
@@ -42,7 +43,7 @@ function LoginPage() {
                     return;
                 }
                 localStorage.setItem("isLoggedIn", "true");
-                localStorage.setItem("username", data.username ?? username);
+                localStorage.setItem("username", data.username ?? normalizedUsername);
                 localStorage.setItem("userRole", role);
                 if (role === "admin") {
                     navigate("/admin", { replace: true });
@@ -120,6 +121,10 @@ function LoginPage() {
                                 placeholder="Username"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
+                                autoCapitalize="none"
+                                autoComplete="username"
+                                autoCorrect="off"
+                                spellCheck={false}
                                 className="w-full py-3.5 px-3 border border-[#ccc] rounded bg-[#e6f2ff] text-black outline-none focus:bg-[#e6f2ff]"
                             />
                         </div>
