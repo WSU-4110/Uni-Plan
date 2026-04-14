@@ -1,6 +1,13 @@
 from fastapi import APIRouter, Query
-from Backend.schemas.plan_schema import CourseList
-from Backend.services.plan_service import save_courses_to_plan, load_courses_from_plan, load_plans_from_user, list_student_plans
+from Backend.schemas.plan_schema import CourseList, RegisterCourseList
+from Backend.services.plan_service import (
+    save_courses_to_plan,
+    load_courses_from_plan,
+    load_plans_from_user,
+    list_student_plans,
+    register_courses,
+    load_registered_courses,
+)
 
 router = APIRouter()
 
@@ -20,6 +27,14 @@ def load_courses(user: str, term: int, name: str):
         term=term,
         name=name
     )
+
+@router.post("/register")
+def register(data: RegisterCourseList):
+    return register_courses(user=data.user, course_ids=data.course_ids)
+
+@router.get("/registered")
+def get_registered(user: str):
+    return load_registered_courses(user)
 
 @router.get("/list")
 def list_plans(user: str):
