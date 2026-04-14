@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from Backend.db import get_conn
 from Backend.routers.courses import days_str, format_location, format_time_range
 
@@ -16,10 +17,14 @@ def save_courses_to_plan(course_ids, user, term, name):
 
         conn.commit()
 
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save plan: {e}")
+
     finally:
         conn.close()
 
-    return {"received": course_ids}
+    return {"success": True, "received": course_ids}
 
 def load_courses_from_plan(user: str, term: int, name: str):
 
