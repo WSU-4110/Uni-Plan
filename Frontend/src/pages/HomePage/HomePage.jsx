@@ -66,28 +66,52 @@ function HomePage() {
 
   useEffect(() => {
     if (!username) return;
+
+    const loadPlanByNameTerm = async (name, term) => {
+      const params = new URLSearchParams({ user: username, term, name });
+      const res = await fetch(`/api/plans/load?${params}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.results ?? []).map(normalizeCourse);
+    };
+
     const autoLoad = async () => {
-      // 1) Try loading from server using saved plan info
+      // 1) Try loading from server using last-saved plan info
       try {
         const planInfo = localStorage.getItem(getLastPlanKey(username));
         if (planInfo) {
           const { name, term } = JSON.parse(planInfo);
           if (name && term) {
-            const params = new URLSearchParams({ user: username, term, name });
-            const res = await fetch(`/api/plans/load?${params}`);
-            if (res.ok) {
-              const data = await res.json();
-              const loaded = (data.results ?? []).map(normalizeCourse);
-              if (loaded.length > 0) {
-                setRegistered(loaded);
-                return;
-              }
+            const loaded = await loadPlanByNameTerm(name, term);
+            if (loaded.length > 0) {
+              setRegistered(loaded);
+              return;
             }
           }
         }
-      } catch { /* fall through to cache */ }
+      } catch { /* fall through */ }
 
-      // 2) Fallback: restore from localStorage cache
+      // 2) No local info — fetch the most recent plan from DB
+      try {
+        const listRes = await fetch(`/api/plans/list?user=${encodeURIComponent(username)}`);
+        if (listRes.ok) {
+          const { plans = [] } = await listRes.json();
+          if (plans.length > 0) {
+            const latest = plans[0];
+            const loaded = await loadPlanByNameTerm(latest.name, latest.termId);
+            if (loaded.length > 0) {
+              setRegistered(loaded);
+              localStorage.setItem(
+                getLastPlanKey(username),
+                JSON.stringify({ name: latest.name, term: latest.termId })
+              );
+              return;
+            }
+          }
+        }
+      } catch { /* fall through */ }
+
+      // 3) Last resort: restore from localStorage cache
       try {
         const cached = localStorage.getItem(`schedule_${username}`);
         if (cached) {
