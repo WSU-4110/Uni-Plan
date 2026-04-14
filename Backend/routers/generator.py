@@ -49,6 +49,8 @@ def build_schedules(course_sections, index, current, results, limit=100):
 @router.post("/generate-schedules")
 async def generate_schedules(request_data: ScheduleRequest):
     courses = request_data.courses
+    days = request_data.days
+    blocked_days = set(day.lower() for day in days)
 
     conn = get_conn()
     cur = conn.cursor(cursor_factory=RealDictCursor)
