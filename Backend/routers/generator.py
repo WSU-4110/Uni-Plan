@@ -45,6 +45,15 @@ def build_schedules(course_sections, index, current, results, limit=100):
             build_schedules(course_sections, index + 1, current, results, limit)
             current.pop()
 
+def violates_day_constraints(time_slot, blocked_days):
+    return (
+        (time_slot["monday"] and "monday" in blocked_days) or
+        (time_slot["tuesday"] and "tuesday" in blocked_days) or
+        (time_slot["wednesday"] and "wednesday" in blocked_days) or
+        (time_slot["thursday"] and "thursday" in blocked_days) or
+        (time_slot["friday"] and "friday" in blocked_days)
+    )
+
 
 @router.post("/generate-schedules")
 async def generate_schedules(request_data: ScheduleRequest):
