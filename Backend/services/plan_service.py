@@ -143,3 +143,34 @@ def load_plans_from_user(user: str):
         raise
     finally:
         conn.close()
+
+
+def list_student_plans(user: str):
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+
+        sql = """
+        SELECT DISTINCT name, term_id,
+               COUNT(course_id) AS course_count
+        FROM plan
+        WHERE student_id = %s
+        GROUP BY name, term_id
+        ORDER BY term_id DESC, name
+        """
+        cur.execute(sql, (user,))
+        rows = cur.fetchall()
+
+        return {
+            "plans": [
+                {
+                    "name": r["name"],
+                    "termId": r["term_id"],
+                    "courseCount": r["course_count"],
+                }
+                for r in rows
+            ]
+        }
+
+    finally:
+        conn.close()

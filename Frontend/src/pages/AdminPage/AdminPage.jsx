@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import CourseSearch from "../../components/CourseSearch/CourseSearch";
 import WeeklySchedule from "../../components/WeeklySchedule/WeeklySchedule";
 import { detectConflicts } from "../../utils/courseUtils";
 import wayneLogo from "../../assets/images/wayneLogo.png";
@@ -9,21 +10,16 @@ const TERM_OPTIONS = [
   { label: "Fall 2026", value: 202609 },
 ];
 
+function termLabel(termId) {
+  return TERM_OPTIONS.find((t) => t.value === termId)?.label ?? String(termId);
+}
+
 function normalizePlanCourse(c) {
-  const timeRaw = c.time || "";
-  let meetingTime = "TBA";
-  if (timeRaw && timeRaw !== "TBA") {
-    const first = timeRaw.split(" - ")[0]?.trim();
-    if (first) meetingTime = first;
-  }
-  const loc = c.location;
-  const building = loc && loc !== "TBA" ? loc : "";
   return {
     ...c,
-    meetingDays: c.days || "TBA",
-    meetingTime,
-    building,
-    room: "",
+    number: c.courseNumber ?? c.number ?? "",
+    meetingDays: c.meetingDays ?? c.days ?? "TBA",
+    meetingTime: c.meetingTime ?? c.time ?? "TBA",
   };
 }
 
@@ -34,11 +30,18 @@ function AdminPage() {
   const userRole = localStorage.getItem("userRole") || "";
 
   const [studentId, setStudentId] = useState("");
-  const [termId, setTermId] = useState(String(TERM_OPTIONS[0].value));
-  const [planName, setPlanName] = useState("");
+  const [plans, setPlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const [plansError, setPlansError] = useState("");
+  const [plansSearched, setPlansSearched] = useState(false);
+
+  const [activePlan, setActivePlan] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [loadLoading, setLoadLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [rawResults, setRawResults] = useState(null);
+
+  const [saveStatus, setSaveStatus] = useState("");
+  const [saveLoading, setSaveLoading] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -50,66 +53,108 @@ function AdminPage() {
     }
   }, [isLoggedIn, userRole, navigate]);
 
-  const registered = useMemo(() => {
-    if (!rawResults) return [];
-    return rawResults.map(normalizePlanCourse);
-  }, [rawResults]);
-
-  const conflicts = useMemo(
-    () => detectConflicts(registered),
-    [registered]
-  );
-
+  const conflicts = useMemo(() => detectConflicts(courses), [courses]);
   const totalCredits = useMemo(
-    () => registered.reduce((s, c) => s + (c.credits || 0), 0),
-    [registered]
+    () => courses.reduce((s, c) => s + (c.credits || 0), 0),
+    [courses]
   );
 
-  const handleLoadSchedule = async (e) => {
-    e.preventDefault();
-    setLoadError("");
+  const handleSearchPlans = async () => {
     const sid = studentId.trim();
-    const pname = planName.trim();
-    if (!sid || !pname) {
-      setLoadError("Student ID and plan name are required.");
-      return;
-    }
-    const term = Number(termId);
-    if (!Number.isFinite(term)) {
-      setLoadError("Select a valid term.");
-      return;
-    }
+    if (!sid) { setPlansError("Enter a Student ID."); return; }
 
-    setLoading(true);
+    setPlansLoading(true);
+    setPlansError("");
+    setPlansSearched(true);
+    setActivePlan(null);
+    setCourses([]);
+    setLoadError("");
+    setSaveStatus("");
+
     try {
       const params = new URLSearchParams({
         admin_user: username,
         student_id: sid,
-        term: String(term),
-        name: pname,
+      });
+      const res = await fetch(`/api/admin/plans/list?${params}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail || `Server error: ${res.status}`);
+      }
+      const data = await res.json();
+      setPlans(data.plans ?? []);
+    } catch (err) {
+      setPlansError(err.message || "Failed to fetch plans.");
+      setPlans([]);
+    } finally {
+      setPlansLoading(false);
+    }
+  };
+
+  const handleSelectPlan = async (plan) => {
+    setActivePlan(plan);
+    setLoadLoading(true);
+    setLoadError("");
+    setSaveStatus("");
+
+    try {
+      const params = new URLSearchParams({
+        admin_user: username,
+        student_id: studentId.trim(),
+        term: String(plan.termId),
+        name: plan.name,
       });
       const res = await fetch(`/api/admin/plans/load?${params}`);
-      const data = await res.json().catch(() => ({}));
-
       if (!res.ok) {
-        const detail =
-          typeof data.detail === "string"
-            ? data.detail
-            : Array.isArray(data.detail)
-              ? data.detail.map((d) => d.msg || d).join(" ")
-              : res.statusText;
-        setRawResults(null);
-        setLoadError(detail || "Could not load this plan.");
-        return;
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail || `Server error: ${res.status}`);
       }
-
-      const list = data.results ?? [];
-      setRawResults(list);
-    } catch {
-      setRawResults(null);
-      setLoadError("Unable to reach the server. Please try again.");
+      const data = await res.json();
+      setCourses((data.results ?? []).map(normalizePlanCourse));
+    } catch (err) {
+      setLoadError(err.message || "Failed to load plan.");
+      setCourses([]);
     } finally {
-      setLoading(false);
+      setLoadLoading(false);
+    }
+  };
+
+  const handleAddCourse = (course) => {
+    setCourses((prev) => [...prev, course]);
+    setSaveStatus("");
+  };
+
+  const handleRemoveCourse = (course) => {
+    setCourses((prev) => prev.filter((c) => c.crn !== course.crn));
+    setSaveStatus("");
+  };
+
+  const handleForceSave = async () => {
+    if (!activePlan) return;
+    setSaveLoading(true);
+    setSaveStatus("");
+    try {
+      const courseIds = courses.map((c) => c.courseId).filter(Boolean);
+      const res = await fetch("/api/admin/plans/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          admin_user: username,
+          student_id: studentId.trim(),
+          course_ids: courseIds,
+          term: activePlan.termId,
+          name: activePlan.name,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail || `Server error: ${res.status}`);
+      }
+      setSaveStatus("Plan saved successfully!");
+    } catch (err) {
+      setSaveStatus(err.message || "Failed to save plan.");
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -161,20 +206,17 @@ function AdminPage() {
           <span className="font-medium text-[#334155]">{username}</span>
         </p>
 
-        <section className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-6 mb-8">
+        {/* Step 1: Search student */}
+        <section className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-6 mb-6">
           <h2 className="text-lg font-semibold text-[#1e293b] mb-1">
-            Look up a student schedule
+            Look up a student
           </h2>
           <p className="text-sm text-[#64748b] mb-5">
-            Load the saved plan for a student by ID, term, and plan name (same
-            fields as in the database).
+            Enter a student ID to see all their saved plans.
           </p>
 
-          <form
-            onSubmit={handleLoadSchedule}
-            className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end"
-          >
-            <div className="flex-1 min-w-[10rem]">
+          <div className="flex items-end gap-3">
+            <div className="flex-1 max-w-xs">
               <label className="block text-xs font-medium text-[#64748b] mb-1">
                 Student ID
               </label>
@@ -182,105 +224,178 @@ function AdminPage() {
                 type="text"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearchPlans()}
                 placeholder="e.g. student1"
                 className="w-full px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10"
                 autoComplete="off"
               />
             </div>
-            <div className="w-full sm:w-48">
-              <label className="block text-xs font-medium text-[#64748b] mb-1">
-                Term
-              </label>
-              <select
-                value={termId}
-                onChange={(e) => setTermId(e.target.value)}
-                className="w-full px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10"
-              >
-                {TERM_OPTIONS.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-1 min-w-[10rem]">
-              <label className="block text-xs font-medium text-[#64748b] mb-1">
-                Plan name
-              </label>
-              <input
-                type="text"
-                value={planName}
-                onChange={(e) => setPlanName(e.target.value)}
-                placeholder="Saved plan name"
-                className="w-full px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10"
-                autoComplete="off"
-              />
-            </div>
             <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2 bg-[#0F3B2E] hover:bg-[#0a2a20] disabled:opacity-50 text-white text-sm font-semibold rounded-md transition w-full sm:w-auto"
+              onClick={handleSearchPlans}
+              disabled={plansLoading}
+              className="px-5 py-2 bg-[#0F3B2E] hover:bg-[#0a2a20] disabled:opacity-50 text-white text-sm font-semibold rounded-md transition"
             >
-              {loading ? "Loading…" : "Load schedule"}
+              {plansLoading ? "Searching…" : "Search"}
             </button>
-          </form>
+          </div>
 
-          {loadError && (
+          {plansError && (
             <p className="mt-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-              {loadError}
+              {plansError}
             </p>
+          )}
+
+          {/* Plan list */}
+          {plansSearched && !plansLoading && !plansError && (
+            <div className="mt-5">
+              {plans.length === 0 ? (
+                <p className="text-sm text-[#94a3b8]">
+                  No saved plans found for <strong>{studentId.trim()}</strong>.
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide mb-2">
+                    {plans.length} plan{plans.length !== 1 ? "s" : ""} found — click to load
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {plans.map((p, i) => {
+                      const isActive =
+                        activePlan?.name === p.name &&
+                        activePlan?.termId === p.termId;
+                      return (
+                        <button
+                          key={`${p.name}-${p.termId}-${i}`}
+                          onClick={() => handleSelectPlan(p)}
+                          className={`text-left px-4 py-3 rounded-lg border transition ${
+                            isActive
+                              ? "bg-[#0F3B2E] text-white border-[#0F3B2E]"
+                              : "bg-[#f8fafc] text-[#334155] border-[#e2e8f0] hover:border-[#0F3B2E] hover:bg-[#f0fdf4]"
+                          }`}
+                        >
+                          <span className="text-sm font-semibold">{p.name}</span>
+                          <span className={`ml-3 text-xs ${isActive ? "text-[#a7d9cc]" : "text-[#64748b]"}`}>
+                            {termLabel(p.termId)} · {p.courseCount} course{p.courseCount !== 1 ? "s" : ""}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </section>
 
-        {rawResults !== null && (
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-lg font-semibold text-[#1e293b]">
-                Student schedule
-              </h2>
-              <p className="text-sm text-[#64748b]">
-                <span className="font-medium text-[#334155]">
-                  {studentId.trim()}
-                </span>
-                {" · "}
-                {TERM_OPTIONS.find((t) => String(t.value) === termId)?.label ??
-                  termId}
-                {" · "}
-                <span className="italic">{planName.trim()}</span>
-                {" · "}
-                <span className="text-[#0F3B2E] font-semibold">
-                  {totalCredits} credits
-                </span>
-              </p>
-            </div>
-
-            {rawResults.length === 0 ? (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-900">
-                No courses in this plan, or the plan does not exist for this
-                student and term.
+        {/* Step 2: Loaded plan editor */}
+        {activePlan && (
+          <>
+            {loadLoading ? (
+              <div className="bg-white border border-[#e2e8f0] rounded-lg p-12 flex items-center justify-center text-[#64748b] text-sm mb-6">
+                Loading schedule…
+              </div>
+            ) : loadError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 mb-6">
+                {loadError}
               </div>
             ) : (
-              <div className="flex flex-col gap-4 min-h-0">
-                <div className="bg-white border border-[#e2e8f0] rounded-lg overflow-hidden min-h-[520px]">
-                  <WeeklySchedule
-                    registered={registered}
-                    conflicts={conflicts}
-                  />
+              <>
+                {/* Info bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div className="flex items-baseline gap-2">
+                    <h2 className="text-lg font-semibold text-[#1e293b]">
+                      {studentId.trim()}'s Schedule
+                    </h2>
+                    <span className="text-sm text-[#64748b]">
+                      {activePlan.name} · {termLabel(activePlan.termId)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded ${
+                        totalCredits > 18
+                          ? "bg-amber-100 text-amber-800 border border-amber-300"
+                          : "bg-[#d1fae5] text-[#065f46]"
+                      }`}
+                    >
+                      {totalCredits} credits{totalCredits > 18 ? " (override)" : ""}
+                    </span>
+                    <button
+                      onClick={handleForceSave}
+                      disabled={saveLoading || courses.length === 0}
+                      className="px-4 py-1.5 bg-[#7c2d12] hover:bg-[#6b2710] disabled:opacity-50 text-white text-sm font-medium rounded-md transition"
+                    >
+                      {saveLoading ? "Saving…" : "Force Save"}
+                    </button>
+                    {saveStatus && (
+                      <p className={`text-sm px-3 py-1.5 rounded ${
+                        saveStatus.includes("success")
+                          ? "bg-green-50 text-green-700 border border-green-200"
+                          : "bg-red-50 text-red-600 border border-red-200"
+                      }`}>
+                        {saveStatus}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </section>
-        )}
 
-        <section className="mt-10 bg-white border border-dashed border-[#cbd5e1] rounded-lg p-6">
-          <h2 className="text-base font-semibold text-[#1e293b] mb-2">
-            Overrides
-          </h2>
-          <p className="text-sm text-[#64748b] leading-relaxed">
-            Time overlaps, credit limits, and enrollment caps will be handled
-            here in a later update. This panel is read-only for now.
-          </p>
-        </section>
+                {/* Main two-panel layout */}
+                <div className="flex gap-4 min-h-0" style={{ height: "calc(100vh - 320px)" }}>
+                  {/* Left: Course search */}
+                  <div className="w-[55%] flex-shrink-0 overflow-y-auto">
+                    <CourseSearch
+                      registered={courses}
+                      onAddCourse={handleAddCourse}
+                      onRemoveCourse={handleRemoveCourse}
+                      conflicts={conflicts}
+                      bypassCreditLimit
+                    />
+                  </div>
+
+                  {/* Right: Schedule + course list */}
+                  <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
+                    {/* Course list */}
+                    <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-4">
+                      {courses.length === 0 ? (
+                        <p className="text-sm text-[#94a3b8] text-center py-4">
+                          No courses in this plan. Use search to add courses.
+                        </p>
+                      ) : (
+                        <ul className="flex flex-col gap-2">
+                          {courses.map((course) => (
+                            <li
+                              key={course.crn}
+                              className="flex items-center justify-between gap-2 p-2.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-md"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-[#1e293b] break-words whitespace-normal">
+                                  {course.name}
+                                </p>
+                                <p className="text-xs text-[#64748b] break-words whitespace-normal">
+                                  {course.courseCode} · {course.credits} cr · {course.meetingDays} {course.meetingTime}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveCourse(course)}
+                                className="flex-shrink-0 px-2 py-1 text-xs text-red-600 border border-red-200 rounded hover:bg-red-50 transition"
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* Weekly schedule */}
+                    <div className="flex-1 min-h-0">
+                      <WeeklySchedule registered={courses} conflicts={conflicts} />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
       </main>
     </div>
   );
