@@ -339,9 +339,9 @@ function AdminPage() {
                 </div>
 
                 {/* Main two-panel layout */}
-                <div className="flex gap-4 min-h-0" style={{ height: "calc(100vh - 320px)" }}>
+                <div className="flex gap-4">
                   {/* Left: Course search */}
-                  <div className="w-[55%] flex-shrink-0 overflow-y-auto">
+                  <div className="w-[55%] flex-shrink-0 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
                     <CourseSearch
                       registered={courses}
                       onAddCourse={handleAddCourse}
@@ -351,8 +351,8 @@ function AdminPage() {
                     />
                   </div>
 
-                  {/* Right: Schedule + course list */}
-                  <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
+                  {/* Right: Course list + Weekly schedule */}
+                  <div className="flex-1 flex flex-col gap-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
                     {/* Course list */}
                     <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm p-4">
                       {courses.length === 0 ? (
@@ -387,7 +387,7 @@ function AdminPage() {
                     </div>
 
                     {/* Weekly schedule */}
-                    <div className="flex-1 min-h-0">
+                    <div style={{ minHeight: "720px" }}>
                       <WeeklySchedule registered={courses} conflicts={conflicts} />
                     </div>
                   </div>

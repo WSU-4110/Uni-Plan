@@ -68,11 +68,10 @@ def load_courses_from_plan(user: str, term: int, name: str):
         JOIN course c ON c.id = s.course_id
         LEFT JOIN time_slot t ON t.id = c.id
         WHERE c.id = ANY(%s)
-          AND s.term_id = %s
         ORDER BY c.subject, c.course_number
         """
 
-        cur.execute(sql, (course_ids, term))
+        cur.execute(sql, (course_ids,))
         rows = cur.fetchall()
 
     finally:
