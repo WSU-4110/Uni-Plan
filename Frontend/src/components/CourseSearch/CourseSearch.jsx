@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import CourseDetails from "../CourseDetails/CourseDetails";
 import { findConflictingCourses } from "../../utils/courseUtils";
+import AvailableSeats from "../AvailableSeats/AvailableSeats";
 
 const TERM_MAP = {
   "Spring/Summer 2026": 202601,
@@ -48,6 +49,8 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
 
   const [sortBy, setSortBy] = useState("courseCode");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const [filterDays, setFilterDays] = useState([]);
   const [filterCredits, setFilterCredits] = useState("");
@@ -62,10 +65,14 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
     setHasSearched(true);
     setLoading(true);
     setErrorMessage("");
+    setCurrentPage(1);
 
     try {
-      const parts = [courseSubject.trim(), courseNumber.trim(), crnSearch.trim()].filter(Boolean);
-      const q = parts.join(" ");
+      const subj = courseSubject.trim();
+      const num = courseNumber.trim();
+      const crn = crnSearch.trim();
+
+      const q = crn || num || subj;
 
       const params = new URLSearchParams({ limit: "200" });
       if (q) params.set("q", q);
@@ -75,7 +82,13 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
       const res = await fetch(`/api/courses/search?${params}`);
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       const data = await res.json();
-      setCourses((data.results ?? []).map(normalizeCourse));
+
+      let results = (data.results ?? []).map(normalizeCourse);
+      if (subj) results = results.filter((c) => (c.subject || "").toLowerCase().includes(subj.toLowerCase()));
+      if (num) results = results.filter((c) => (c.courseNumber ?? c.number ?? "").toLowerCase().includes(num.toLowerCase()));
+      if (crn) results = results.filter((c) => (c.crn || "").includes(crn));
+
+      setCourses(results);
     } catch (err) {
       setErrorMessage(err.message || "Failed to fetch courses. Please try again.");
       setCourses([]);
@@ -115,6 +128,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
     setFilterDays([]);
     setFilterCredits("");
     setFilterInstructor("");
+    setCurrentPage(1);
   };
 
   const activeFilters = useMemo(() => {
@@ -136,6 +150,12 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
   }, [courses, filterDays, filterCredits, filterInstructor]);
 
   const sortedResults = useMemo(() => sortResults(results, sortBy, sortOrder), [results, sortBy, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedResults.length / PAGE_SIZE));
+  const paginatedResults = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return sortedResults.slice(start, start + PAGE_SIZE);
+  }, [sortedResults, currentPage]);
 
   const showPanel = hasSearched || courseSubject || courseNumber || crnSearch || term || filterDays.length > 0 || filterCredits || filterInstructor;
 
@@ -302,54 +322,123 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
               </div>
 
               {sortedResults.length > 0 ? (
-                <ul className="flex flex-col gap-3">
-                  {sortedResults.map((course) => {
-                    const hasConflict = conflicts.has(course.crn);
-                    return (
-                      <li key={course.crn} className={`bg-white border rounded-lg p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 hover:shadow-md transition ${hasConflict ? "border-red-400 bg-red-50" : "border-[#e2e8f0] hover:border-[#cbd5e1]"}`}>
-                        <div className="flex flex-col gap-2 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-semibold text-[#0F3B2E] bg-[#d1fae5] px-2 py-0.5 rounded">{course.courseCode}</span>
-                            <span className="text-xs text-[#64748b]">CRN: {course.crn}</span>
-                            <span className="text-xs text-[#64748b]">Term: {course.term}</span>
-                            {hasConflict && (
-                              <span className="text-xs font-semibold text-red-600 bg-red-100 border border-red-300 px-2 py-0.5 rounded-full">
-                                ⚠ Conflict
-                              </span>
+                <>
+                  <ul className="flex flex-col gap-3">
+                    {paginatedResults.map((course) => {
+                      const hasConflict = conflicts.has(course.crn);
+                      return (
+                        <li key={course.crn} className={`relative bg-white border rounded-lg p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 hover:shadow-md transition ${hasConflict ? "border-red-400 bg-red-50" : "border-[#e2e8f0] hover:border-[#cbd5e1]"}`}>
+                          <div className="flex flex-col gap-2 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-semibold text-[#0F3B2E] bg-[#d1fae5] px-2 py-0.5 rounded">{course.courseCode}</span>
+                              <span className="text-xs text-[#64748b]">CRN: {course.crn}</span>
+                              <span className="text-xs text-[#64748b]">Term: {course.term}</span>
+                              {hasConflict && (
+                                <span className="text-xs font-semibold text-red-600 bg-red-100 border border-red-300 px-2 py-0.5 rounded-full">
+                                  ⚠ Conflict
+                                </span>
+                              )}
+                            </div>
+
+                            <p onClick={() => setSelectedCourse(course)} className="text-base font-semibold text-[#1e293b] hover:underline underline-offset-4 cursor-pointer">{course.name}</p>
+
+                            <div className="flex flex-wrap gap-x-4 gap-y-1">
+                              <span className="text-sm text-[#475569]">📅 {course.meetingDays} · {course.meetingTime}</span>
+                              <span className="text-sm text-[#475569]">🎓 {course.credits} credits</span>
+                              <span className="text-sm text-[#475569]">👤 {course.instructor}</span>
+                              <span className="text-sm text-[#475569]">📍 {course.location}</span>
+                            </div>
+                          </div>
+
+                          {console.log(course)}
+
+
+
+                          <AvailableSeats 
+                            maxSeats={course.maxSeats} 
+                            availableSeats={course.availableSeats} 
+                            />
+
+                          <div className="flex-shrink-0">
+                            {isRegistered(course) ? (
+                              <button
+                                onClick={() => handleAddCourse(course)}
+                                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition"
+                              >
+                                Remove
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleAddCourse(course)}
+                                className="px-4 py-1.5 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-medium rounded-md transition"
+                              >
+                                Add
+                              </button>
                             )}
                           </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
 
-                          <p onClick={() => setSelectedCourse(course)} className="text-base font-semibold text-[#1e293b] hover:underline underline-offset-4 cursor-pointer">{course.name}</p>
+                  {totalPages > 1 && (() => {
+                    const groupStart = Math.floor((currentPage - 1) / 5) * 5 + 1;
+                    const groupEnd = Math.min(groupStart + 4, totalPages);
+                    const pages = Array.from({ length: groupEnd - groupStart + 1 }, (_, i) => groupStart + i);
 
-                          <div className="flex flex-wrap gap-x-4 gap-y-1">
-                            <span className="text-sm text-[#475569]">📅 {course.meetingDays} · {course.meetingTime}</span>
-                            <span className="text-sm text-[#475569]">🎓 {course.credits} credits</span>
-                            <span className="text-sm text-[#475569]">👤 {course.instructor}</span>
-                            <span className="text-sm text-[#475569]">📍 {course.location}</span>
-                          </div>
-                        </div>
+                    return (
+                      <div className="flex items-center justify-center gap-2 pt-2">
+                        {groupStart > 1 && (
+                          <button
+                            onClick={() => setCurrentPage(1)}
+                            className="px-3 py-1.5 text-sm font-medium rounded-md border border-[#e2e8f0] bg-white text-[#334155] hover:border-[#0F3B2E] transition"
+                          >
+                            Start
+                          </button>
+                        )}
 
-                        <div className="flex-shrink-0">
-                          {isRegistered(course) ? (
-                            <button
-                              onClick={() => handleAddCourse(course)}
-                              className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition"
-                            >
-                              Remove
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleAddCourse(course)}
-                              className="px-4 py-1.5 bg-[#0F3B2E] hover:bg-[#0a2a20] text-white text-sm font-medium rounded-md transition"
-                            >
-                              Add
-                            </button>
-                          )}
-                        </div>
-                      </li>
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1.5 text-sm font-medium rounded-md border border-[#e2e8f0] bg-white text-[#334155] hover:border-[#0F3B2E] disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          Prev
+                        </button>
+
+                        {pages.map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => setCurrentPage(p)}
+                            className={`w-9 h-9 text-sm font-medium rounded-md border transition ${
+                              currentPage === p
+                                ? "bg-[#0F3B2E] text-white border-[#0F3B2E]"
+                                : "bg-white text-[#334155] border-[#e2e8f0] hover:border-[#0F3B2E]"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        ))}
+
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1.5 text-sm font-medium rounded-md border border-[#e2e8f0] bg-white text-[#334155] hover:border-[#0F3B2E] disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          Next
+                        </button>
+
+                        {groupEnd < totalPages && (
+                          <button
+                            onClick={() => setCurrentPage(totalPages)}
+                            className="px-3 py-1.5 text-sm font-medium rounded-md border border-[#e2e8f0] bg-white text-[#334155] hover:border-[#0F3B2E] transition"
+                          >
+                            End
+                          </button>
+                        )}
+                      </div>
                     );
-                  })}
-                </ul>
+                  })()}
+                </>
               ) : (
                 <div className="bg-white border border-[#e2e8f0] rounded-lg p-12 flex flex-col items-center justify-center text-center text-[#64748b]">
                   <p className="text-base font-medium">No courses found</p>

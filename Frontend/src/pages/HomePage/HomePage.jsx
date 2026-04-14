@@ -41,6 +41,12 @@ function HomePage() {
   const username = localStorage.getItem("username") || "";
 
   useEffect(() => {
+    if (localStorage.getItem("userRole") === "admin") {
+      navigate("/admin", { replace: true });
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     try {
       const raw = localStorage.getItem(getQuickPlanStorageKey(username));
       if (raw) {
@@ -104,6 +110,7 @@ function HomePage() {
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("username");
+    localStorage.removeItem("userRole");
     navigate("/login", { replace: true });
   };
 

@@ -98,6 +98,22 @@ def load_courses_from_plan(user: str, term: int, name: str):
                 "days": days_str(r),
                 "time": format_time_range(r),
                 "location": format_location(r),
+
+                # WeeklySchedule format
+                "meetingDays": days_str(r),
+                "meetingTime": format_time_range(r),
+                "building": r["building"],
+                "room": r["room_number"],
+
+                # raw values for conflict detection
+                "startMin": r["start_min"],
+                "endMin": r["end_min"],
+                "monday": r["monday"],
+                "tuesday": r["tuesday"],
+                "wednesday": r["wednesday"],
+                "thursday": r["thursday"],
+                "friday": r["friday"],
+
                 "maxSeats": max_seats,
                 "registeredSeats": registered_seats,
                 "availableSeats": max_seats - registered_seats,
@@ -105,3 +121,25 @@ def load_courses_from_plan(user: str, term: int, name: str):
         )
 
     return {"results": results}
+
+
+def load_plans_from_user(user: str):
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+
+        sql = "SELECT DISTINCT name FROM plan WHERE student_id = %s"
+        cur.execute(sql, (user,))
+
+        result = cur.fetchall()
+        planName = [r["name"] for r in result]
+
+        results = [{"planName": r} for r in planName]
+
+        return {"results": results}
+
+    except Exception as e:
+        print("ERROR in load_plans:", e)
+        raise
+    finally:
+        conn.close()
