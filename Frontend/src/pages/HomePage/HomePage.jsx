@@ -36,6 +36,8 @@ function HomePage() {
   const [showQuickPlanner, setShowQuickPlanner] = useState(false);
   const [savedQuickPlans, setSavedQuickPlans] = useState([]);
   const [showAdminOverride, setShowAdminOverride] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [registerStatus, setRegisterStatus] = useState("");
 
   const menuRef = useRef(null);
   const savePlanModalRef = useRef(null);
@@ -68,51 +70,21 @@ function HomePage() {
   useEffect(() => {
     if (!username) return;
 
-    const loadPlanByNameTerm = async (name, term) => {
-      const params = new URLSearchParams({ user: username, term, name });
-      const res = await fetch(`/api/plans/load?${params}`);
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.results ?? []).map(normalizeCourse);
-    };
-
     const autoLoad = async () => {
-      // 1) Try loading from server using last-saved plan info
+      // Load the student's registered schedule from the server
       try {
-        const planInfo = localStorage.getItem(getLastPlanKey(username));
-        if (planInfo) {
-          const { name, term } = JSON.parse(planInfo);
-          if (name && term) {
-            const loaded = await loadPlanByNameTerm(name, term);
-            if (loaded.length > 0) {
-              setRegistered(loaded);
-              return;
-            }
+        const res = await fetch(`/api/plans/registered?user=${encodeURIComponent(username)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const loaded = (data.results ?? []).map(normalizeCourse);
+          if (loaded.length > 0) {
+            setRegistered(loaded);
+            return;
           }
         }
       } catch { /* fall through */ }
 
-      // 2) No local info — fetch the most recent plan from DB
-      try {
-        const listRes = await fetch(`/api/plans/list?user=${encodeURIComponent(username)}`);
-        if (listRes.ok) {
-          const { plans = [] } = await listRes.json();
-          if (plans.length > 0) {
-            const latest = plans[0];
-            const loaded = await loadPlanByNameTerm(latest.name, latest.termId);
-            if (loaded.length > 0) {
-              setRegistered(loaded);
-              localStorage.setItem(
-                getLastPlanKey(username),
-                JSON.stringify({ name: latest.name, term: latest.termId })
-              );
-              return;
-            }
-          }
-        }
-      } catch { /* fall through */ }
-
-      // 3) Last resort: restore from localStorage cache
+      // Fallback: restore from localStorage cache
       try {
         const cached = localStorage.getItem(`schedule_${username}`);
         if (cached) {
@@ -186,6 +158,31 @@ function HomePage() {
     }
   };
 
+
+  const handleRegister = async () => {
+    if (registered.length === 0) return;
+    setRegisterLoading(true);
+    setRegisterStatus("");
+    try {
+      const courseIds = registered.map((c) => c.courseId).filter(Boolean);
+      const res = await fetch("/api/plans/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: username, course_ids: courseIds }),
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      setRegisterStatus("registered");
+      try {
+        localStorage.setItem(`schedule_${username}`, JSON.stringify(registered));
+      } catch { /* ignore */ }
+      setTimeout(() => setRegisterStatus(""), 3000);
+    } catch {
+      setRegisterStatus("error");
+      setTimeout(() => setRegisterStatus(""), 3000);
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
 
   const handleSaveQuickPlans = (plans) => {
     setSavedQuickPlans(plans);
@@ -286,6 +283,25 @@ function HomePage() {
               className="px-3 py-1.5 text-xs font-medium text-white bg-[#1a5c45] border border-[#2d7a5f] rounded-md hover:bg-[#226b52] transition"
             >
               Save Plan
+            </button>
+            <button
+              onClick={handleRegister}
+              disabled={registerLoading || registered.length === 0}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition border ${
+                registerStatus === "registered"
+                  ? "bg-green-600 border-green-500 text-white"
+                  : registerStatus === "error"
+                  ? "bg-red-600 border-red-500 text-white"
+                  : "bg-[#b45309] border-[#d97706] text-white hover:bg-[#92400e] disabled:opacity-40"
+              }`}
+            >
+              {registerLoading
+                ? "Registering…"
+                : registerStatus === "registered"
+                ? "Registered!"
+                : registerStatus === "error"
+                ? "Failed"
+                : "Register"}
             </button>
           </div>
 
