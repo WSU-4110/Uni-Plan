@@ -17,7 +17,7 @@ function MySchedule({ courses, onRemove, totalCredits }, ref) {
       </div>
 
       {courses.length === 0 ? (
-        <p className="text-sm text-[#94a3b8] text-center py-6">
+        <p className="text-sm text-[#64748B] text-center py-6">
           No courses added yet.
         </p>
       ) : (

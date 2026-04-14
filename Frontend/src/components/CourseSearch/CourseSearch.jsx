@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import CourseDetails from "../CourseDetails/CourseDetails";
 import { findConflictingCourses } from "../../utils/courseUtils";
@@ -60,6 +60,38 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
 
   const totalCredits = registered.reduce((sum, c) => sum + (c.credits || 0), 0);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const courseDetailsModalRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectedCourse) return;
+
+    const modalEl = courseDetailsModalRef.current;
+    const focusableSelector =
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const focusable = modalEl ? Array.from(modalEl.querySelectorAll(focusableSelector)) : [];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    (first || modalEl)?.focus();
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setSelectedCourse(null);
+        return;
+      }
+      if (e.key === "Tab" && first && last) {
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCourse]);
 
   const handleSearch = async () => {
     setHasSearched(true);
@@ -167,7 +199,14 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
       {selectedCourse && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto py-8">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedCourse(null)} />
-          <div className="relative z-10 w-full max-w-3xl px-4">
+          <div
+            ref={courseDetailsModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Course details"
+            tabIndex={-1}
+            className="relative z-10 w-full max-w-3xl px-4"
+          >
             <CourseDetails course={selectedCourse} onClose={() => setSelectedCourse(null)} />
           </div>
         </div>
@@ -191,6 +230,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
 
           <div className="flex flex-wrap items-end gap-2 flex-1">
             <input
+              id="course-subject-input"
               type="text"
               placeholder="Course Subject"
               value={courseSubject}
@@ -200,6 +240,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
               className="flex-1 min-w-[8rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
             />
             <input
+              id="course-number-input"
               type="text"
               placeholder="Course Number"
               value={courseNumber}
@@ -209,6 +250,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
               className="flex-1 min-w-[8rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
             />
             <input
+              id="crn-input"
               type="text"
               placeholder="CRN"
               value={crnSearch}
@@ -234,11 +276,12 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
 
           <div className="flex flex-col sm:flex-row flex-wrap gap-4">
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-medium text-[#64748b] uppercase tracking-wide">Meeting Days</label>
+              <label htmlFor="meeting-day-filter-m" className="text-xs font-medium text-[#64748b] uppercase tracking-wide">Meeting Days</label>
               <div className="flex gap-1 flex-wrap">
                 {ALL_DAYS.map((day) => (
                   <button
                     key={day}
+                    id={`meeting-day-filter-${day.toLowerCase()}`}
                     onClick={() => toggleDay(day)}
                     className={`w-8 h-8 text-sm font-medium rounded-md border transition ${
                       filterDays.includes(day)
@@ -340,7 +383,13 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
                               )}
                             </div>
 
-                            <p onClick={() => setSelectedCourse(course)} className="text-base font-semibold text-[#1e293b] hover:underline underline-offset-4 cursor-pointer">{course.name}</p>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCourse(course)}
+                              className="text-left text-base font-semibold text-[#1e293b] hover:underline underline-offset-4 cursor-pointer"
+                            >
+                              {course.name}
+                            </button>
 
                             <div className="flex flex-wrap gap-x-4 gap-y-1">
                               <span className="text-sm text-[#475569]">📅 {course.meetingDays} · {course.meetingTime}</span>

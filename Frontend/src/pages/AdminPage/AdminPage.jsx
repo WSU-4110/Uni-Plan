@@ -215,12 +215,13 @@ function AdminPage() {
             Enter a student ID to see all their saved plans.
           </p>
 
-          <div className="flex items-end gap-3">
-            <div className="flex-1 max-w-xs">
-              <label className="block text-xs font-medium text-[#64748b] mb-1">
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="flex-1 min-w-[10rem]">
+              <label htmlFor="admin-student-id" className="block text-xs font-medium text-[#64748b] mb-1">
                 Student ID
               </label>
               <input
+                id="admin-student-id"
                 type="text"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}

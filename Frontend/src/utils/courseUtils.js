@@ -64,21 +64,42 @@ export function timeToFloat(timeStr) {
   return hours + minutes / 60;
 }
 
+function getCourseTimeRange(course) {
+  const timeStr = (course.meetingTime || course.time || "").trim();
+  if (!timeStr || timeStr === "TBA") return null;
+
+  const parts = timeStr.split(" - ").map((p) => p.trim());
+  if (parts.length === 2) {
+    const start = parseTo24h(parts[0]);
+    const end = parseTo24h(parts[1]);
+    const startFloat = timeToFloat(start);
+    const endFloat = timeToFloat(end);
+    if (!Number.isNaN(startFloat) && !Number.isNaN(endFloat) && endFloat > startFloat) {
+      return { start: startFloat, end: endFloat };
+    }
+  }
+
+  const start = parseTo24h(timeStr);
+  const startFloat = timeToFloat(start);
+  if (Number.isNaN(startFloat)) return null;
+  const durationHours = estimateDuration(course.meetingDays || course.days || "") / 60;
+  return { start: startFloat, end: startFloat + durationHours };
+}
+
 /**
  * Returns true if two courses overlap on at least one shared day and their time ranges intersect.
  */
 export function coursesOverlap(a, b) {
-  const daysA = parseMeetingDays(a.meetingDays);
-  const daysB = parseMeetingDays(b.meetingDays);
+  const daysA = parseMeetingDays(a.meetingDays || a.days || "");
+  const daysB = parseMeetingDays(b.meetingDays || b.days || "");
   const sharedDays = daysA.filter((d) => daysB.includes(d));
   if (sharedDays.length === 0) return false;
 
-  const startA = timeToFloat(parseTo24h(a.meetingTime));
-  const endA = startA + estimateDuration(a.meetingDays) / 60;
-  const startB = timeToFloat(parseTo24h(b.meetingTime));
-  const endB = startB + estimateDuration(b.meetingDays) / 60;
+  const rangeA = getCourseTimeRange(a);
+  const rangeB = getCourseTimeRange(b);
+  if (!rangeA || !rangeB) return false;
 
-  return startA < endB && startB < endA;
+  return rangeA.start < rangeB.end && rangeB.start < rangeA.end;
 }
 
 /**
