@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from Backend.db import get_conn
 from Backend.routers.courses import days_str, format_location, format_time_range
 
@@ -11,15 +12,19 @@ def save_courses_to_plan(course_ids, user, term, name):
         cur.execute(delete_sql, (user, term, name))
 
         for course_id in course_ids:
-            sql = "INSERT INTO plan(student_id, course_id, term_id, name, is_active) VALUES (%s, %s, %s, %s, %s)"
+            sql = "INSERT INTO plan(student_id, course_id, term_id, name, is_active, updated_at) VALUES (%s, %s, %s, %s, %s, NOW())"
             cur.execute(sql, (user, course_id, term, name, True))
 
         conn.commit()
 
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save plan: {e}")
+
     finally:
         conn.close()
 
-    return {"received": course_ids}
+    return {"success": True, "received": course_ids}
 
 def load_courses_from_plan(user: str, term: int, name: str):
 
@@ -63,11 +68,10 @@ def load_courses_from_plan(user: str, term: int, name: str):
         JOIN course c ON c.id = s.course_id
         LEFT JOIN time_slot t ON t.id = c.id
         WHERE c.id = ANY(%s)
-          AND s.term_id = %s
         ORDER BY c.subject, c.course_number
         """
 
-        cur.execute(sql, (course_ids, term))
+        cur.execute(sql, (course_ids,))
         rows = cur.fetchall()
 
     finally:
@@ -136,5 +140,129 @@ def load_plans_from_user(user: str):
     except Exception as e:
         print("ERROR in load_plans:", e)
         raise
+    finally:
+        conn.close()
+
+
+REGISTERED_PLAN_NAME = "__registered__"
+
+
+def register_courses(user: str, course_ids: list[int]):
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "DELETE FROM plan WHERE student_id = %s AND name = %s",
+            (user, REGISTERED_PLAN_NAME),
+        )
+        for cid in course_ids:
+            cur.execute(
+                "INSERT INTO plan (student_id, course_id, term_id, name, is_active, updated_at) "
+                "VALUES (%s, %s, 0, %s, true, NOW())",
+                (user, cid, REGISTERED_PLAN_NAME),
+            )
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to register: {e}")
+    finally:
+        conn.close()
+    return {"success": True, "registered": course_ids}
+
+
+def load_registered_courses(user: str):
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT course_id FROM plan WHERE student_id = %s AND name = %s",
+            (user, REGISTERED_PLAN_NAME),
+        )
+        course_ids = [r["course_id"] for r in cur.fetchall()]
+
+        if not course_ids:
+            return {"results": []}
+
+        sql = """
+        SELECT
+            s."CRN" AS crn, s.term_id, s.max_reg, s.registered,
+            c.id AS course_id, c.subject, c.course_number, c.title,
+            c.credit_hours, c.instructor, c.building, c.room_number,
+            t.monday, t.tuesday, t.wednesday, t.thursday, t.friday,
+            t.start_min, t.end_min
+        FROM section s
+        JOIN course c ON c.id = s.course_id
+        LEFT JOIN time_slot t ON t.id = c.id
+        WHERE c.id = ANY(%s)
+        ORDER BY c.subject, c.course_number
+        """
+        cur.execute(sql, (course_ids,))
+        rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    results = []
+    for r in rows:
+        max_seats = r["max_reg"] or 0
+        registered_seats = r["registered"] or 0
+        results.append({
+            "courseId": r["course_id"],
+            "subject": r["subject"],
+            "courseNumber": r["course_number"],
+            "courseCode": f"{r['subject']} {r['course_number']}",
+            "crn": str(r["crn"]),
+            "term": str(r["term_id"]),
+            "name": r["title"],
+            "credits": r["credit_hours"],
+            "instructor": r["instructor"] or "TBA",
+            "days": days_str(r),
+            "time": format_time_range(r),
+            "location": format_location(r),
+            "meetingDays": days_str(r),
+            "meetingTime": format_time_range(r),
+            "building": r["building"],
+            "room": r["room_number"],
+            "startMin": r["start_min"],
+            "endMin": r["end_min"],
+            "monday": r["monday"],
+            "tuesday": r["tuesday"],
+            "wednesday": r["wednesday"],
+            "thursday": r["thursday"],
+            "friday": r["friday"],
+            "maxSeats": max_seats,
+            "registeredSeats": registered_seats,
+            "availableSeats": max_seats - registered_seats,
+        })
+    return {"results": results}
+
+
+def list_student_plans(user: str):
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+
+        sql = """
+        SELECT name, term_id,
+               COUNT(course_id) AS course_count,
+               MAX(updated_at) AS last_updated
+        FROM plan
+        WHERE student_id = %s AND name != %s
+        GROUP BY name, term_id
+        ORDER BY last_updated DESC NULLS LAST, term_id DESC, name
+        """
+        cur.execute(sql, (user, REGISTERED_PLAN_NAME))
+        rows = cur.fetchall()
+
+        return {
+            "plans": [
+                {
+                    "name": r["name"],
+                    "termId": r["term_id"],
+                    "courseCount": r["course_count"],
+                }
+                for r in rows
+            ]
+        }
+
     finally:
         conn.close()
