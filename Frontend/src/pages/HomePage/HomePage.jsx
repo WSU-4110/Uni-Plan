@@ -136,7 +136,7 @@ function HomePage() {
       try {
         localStorage.setItem(
           getLastPlanKey(username),
-          JSON.stringify({ name: planName.trim(), term: planTermId })
+          JSON.stringify({ name: planName.trim(), term: parseInt(planTermId) })
         );
         localStorage.setItem(
           `schedule_${username}`,
