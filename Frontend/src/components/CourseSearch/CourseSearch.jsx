@@ -37,7 +37,7 @@ function sortResults(results, sortBy, sortOrder) {
   });
 }
 
-export default function CourseSearch({ registered = [], onAddCourse, onRemoveCourse, conflicts = new Set() }) {
+export default function CourseSearch({ registered = [], onAddCourse, onRemoveCourse, conflicts = new Set(), bypassCreditLimit = false }) {
   const [courseSubject, setCourseSubject] = useState("");
   const [courseNumber, setCourseNumber] = useState("");
   const [crnSearch, setCrnSearch] = useState("");
@@ -112,7 +112,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
       onRemoveCourse?.(course);
       return;
     }
-    if (totalCredits + (course.credits || 0) > 18) {
+    if (!bypassCreditLimit && totalCredits + (course.credits || 0) > 18) {
       setErrorMessage("Error: Cannot exceed 18 credits.");
       return;
     }

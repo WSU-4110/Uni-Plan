@@ -4,6 +4,7 @@ import CourseSearch from "../../components/CourseSearch/CourseSearch";
 import WeeklySchedule from "../../components/WeeklySchedule/WeeklySchedule";
 import MySchedule from "../../components/MySchedule/MySchedule";
 import QuickPlanner from "../../components/QuickPlanner/QuickPlanner";
+import AdminOverride from "../../components/AdminOverride/AdminOverride";
 import { detectConflicts } from "../../utils/courseUtils";
 import wayneLogo from "../../assets/images/wayneLogo.png";
 
@@ -34,11 +35,14 @@ function HomePage() {
   const [planLoading, setPlanLoading] = useState(false);
   const [showQuickPlanner, setShowQuickPlanner] = useState(false);
   const [savedQuickPlans, setSavedQuickPlans] = useState([]);
+  const [showAdminOverride, setShowAdminOverride] = useState(false);
 
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
   const username = localStorage.getItem("username") || "";
+  const userRole = localStorage.getItem("userRole") || "";
+  const isAdmin = userRole === "admin";
 
   useEffect(() => {
     if (localStorage.getItem("userRole") === "admin") {
@@ -204,6 +208,14 @@ function HomePage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => setShowAdminOverride(true)}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-red-700 border border-red-500 rounded-md hover:bg-red-800 transition"
+              >
+                Admin Override
+              </button>
+            )}
             <button
               onClick={() => setShowQuickPlanner(true)}
               className="relative px-3 py-1.5 text-xs font-medium text-white bg-[#2563eb] border border-[#3b82f6] rounded-md hover:bg-[#1d4ed8] transition"
@@ -347,6 +359,10 @@ function HomePage() {
           savedPlans={savedQuickPlans}
           onSavePlans={handleSaveQuickPlans}
         />
+      )}
+
+      {showAdminOverride && (
+        <AdminOverride onClose={() => setShowAdminOverride(false)} />
       )}
     </div>
   );
