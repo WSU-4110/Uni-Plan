@@ -12,7 +12,7 @@ def save_courses_to_plan(course_ids, user, term, name):
         cur.execute(delete_sql, (user, term, name))
 
         for course_id in course_ids:
-            sql = "INSERT INTO plan(student_id, course_id, term_id, name, is_active) VALUES (%s, %s, %s, %s, %s)"
+            sql = "INSERT INTO plan(student_id, course_id, term_id, name, is_active, updated_at) VALUES (%s, %s, %s, %s, %s, NOW())"
             cur.execute(sql, (user, course_id, term, name, True))
 
         conn.commit()
@@ -150,12 +150,13 @@ def list_student_plans(user: str):
         cur = conn.cursor()
 
         sql = """
-        SELECT DISTINCT name, term_id,
-               COUNT(course_id) AS course_count
+        SELECT name, term_id,
+               COUNT(course_id) AS course_count,
+               MAX(updated_at) AS last_updated
         FROM plan
         WHERE student_id = %s
         GROUP BY name, term_id
-        ORDER BY term_id DESC, name
+        ORDER BY last_updated DESC NULLS LAST, term_id DESC, name
         """
         cur.execute(sql, (user,))
         rows = cur.fetchall()
