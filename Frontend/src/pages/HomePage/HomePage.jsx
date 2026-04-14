@@ -38,6 +38,10 @@ function HomePage() {
   const [showAdminOverride, setShowAdminOverride] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerStatus, setRegisterStatus] = useState("");
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [savedPlans, setSavedPlans] = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+  const [loadingPlanName, setLoadingPlanName] = useState(null);
 
   const menuRef = useRef(null);
   const savePlanModalRef = useRef(null);
@@ -159,6 +163,43 @@ function HomePage() {
   };
 
 
+  const openLoadModal = async () => {
+    setShowLoadModal(true);
+    setLoadingPlans(true);
+    try {
+      const res = await fetch(`/api/plans/list?user=${encodeURIComponent(username)}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setSavedPlans(data.plans ?? []);
+    } catch {
+      setSavedPlans([]);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  const handleLoadPlan = async (plan) => {
+    setLoadingPlanName(plan.name);
+    try {
+      const params = new URLSearchParams({
+        user: username,
+        term: String(plan.termId),
+        name: plan.name,
+      });
+      const res = await fetch(`/api/plans/load?${params}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const loaded = (data.results ?? []).map(normalizeCourse);
+      if (loaded.length > 0) {
+        setRegistered(loaded);
+      }
+      setShowLoadModal(false);
+    } catch { /* ignore */ }
+    finally {
+      setLoadingPlanName(null);
+    }
+  };
+
   const handleRegister = async () => {
     if (registered.length === 0) return;
     setRegisterLoading(true);
@@ -277,6 +318,12 @@ function HomePage() {
               {savedQuickPlans.length > 0 && !showQuickPlanner && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full border border-white" />
               )}
+            </button>
+            <button
+              onClick={openLoadModal}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-[#475569] border border-[#64748b] rounded-md hover:bg-[#334155] transition"
+            >
+              Load Plan
             </button>
             <button
               onClick={openSavePlan}
@@ -404,6 +451,52 @@ function HomePage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showLoadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowLoadModal(false)} />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative z-10 bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4 max-h-[70vh] flex flex-col"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-[#1e293b]">Load Plan</h2>
+              <button
+                onClick={() => setShowLoadModal(false)}
+                className="text-[#94a3b8] hover:text-[#475569] transition text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+
+            {loadingPlans ? (
+              <p className="text-sm text-[#64748b] text-center py-8">Loading plans…</p>
+            ) : savedPlans.length === 0 ? (
+              <p className="text-sm text-[#94a3b8] text-center py-8">No saved plans found.</p>
+            ) : (
+              <div className="flex flex-col gap-2 overflow-y-auto">
+                {savedPlans.map((p, i) => (
+                  <button
+                    key={`${p.name}-${p.termId}-${i}`}
+                    onClick={() => handleLoadPlan(p)}
+                    disabled={loadingPlanName === p.name}
+                    className="text-left px-4 py-3 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] hover:border-[#0F3B2E] hover:bg-[#f0fdf4] transition disabled:opacity-50"
+                  >
+                    <span className="text-sm font-semibold text-[#1e293b]">{p.name}</span>
+                    <span className="ml-2 text-xs text-[#64748b]">
+                      Term {p.termId} · {p.courseCount} course{p.courseCount !== 1 ? "s" : ""}
+                    </span>
+                    {loadingPlanName === p.name && (
+                      <span className="ml-2 text-xs text-[#0F3B2E]">Loading…</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
