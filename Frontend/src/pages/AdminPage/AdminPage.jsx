@@ -175,10 +175,11 @@ function AdminPage() {
             className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end"
           >
             <div className="flex-1 min-w-[10rem]">
-              <label className="block text-xs font-medium text-[#64748b] mb-1">
+              <label htmlFor="admin-student-id" className="block text-xs font-medium text-[#64748b] mb-1">
                 Student ID
               </label>
               <input
+                id="admin-student-id"
                 type="text"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
@@ -188,10 +189,11 @@ function AdminPage() {
               />
             </div>
             <div className="w-full sm:w-48">
-              <label className="block text-xs font-medium text-[#64748b] mb-1">
+              <label htmlFor="admin-term-id" className="block text-xs font-medium text-[#64748b] mb-1">
                 Term
               </label>
               <select
+                id="admin-term-id"
                 value={termId}
                 onChange={(e) => setTermId(e.target.value)}
                 className="w-full px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10"
@@ -204,10 +206,11 @@ function AdminPage() {
               </select>
             </div>
             <div className="flex-1 min-w-[10rem]">
-              <label className="block text-xs font-medium text-[#64748b] mb-1">
+              <label htmlFor="admin-plan-name" className="block text-xs font-medium text-[#64748b] mb-1">
                 Plan name
               </label>
               <input
+                id="admin-plan-name"
                 type="text"
                 value={planName}
                 onChange={(e) => setPlanName(e.target.value)}

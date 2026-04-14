@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   parseMeetingDays,
   parseTo24h,
@@ -89,6 +89,38 @@ export default function QuickPlanner({
   );
   const [compareSelection, setCompareSelection] = useState([]);
   const [showCompare, setShowCompare] = useState(false);
+  const quickPlannerModalRef = useRef(null);
+
+  useEffect(() => {
+    const modalEl = quickPlannerModalRef.current;
+    if (!modalEl) return;
+
+    const focusableSelector =
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const focusable = Array.from(modalEl.querySelectorAll(focusableSelector));
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    (first || modalEl).focus();
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose?.();
+        return;
+      }
+      if (e.key === "Tab" && first && last) {
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -210,10 +242,17 @@ export default function QuickPlanner({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto py-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[92vh] flex flex-col border border-[#e2e8f0]">
+      <div
+        ref={quickPlannerModalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quick-planner-title"
+        tabIndex={-1}
+        className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[92vh] flex flex-col border border-[#e2e8f0]"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-7 py-4 border-b-2 border-[#e2e8f0] bg-[#fafafa] flex-shrink-0">
-          <h2 className="text-xl font-bold text-[#0f172a]">
+          <h2 id="quick-planner-title" className="text-xl font-bold text-[#0f172a]">
             Quick Planner
           </h2>
           <button
@@ -255,11 +294,13 @@ export default function QuickPlanner({
                 ))}
               </select>
               <input
+                id="quick-planner-search-input"
                 type="text"
                 placeholder="Search courses (e.g. CSC, MAT)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                aria-label="Search courses"
                 className="flex-1 px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
               />
               <button

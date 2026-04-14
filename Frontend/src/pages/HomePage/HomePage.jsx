@@ -36,6 +36,7 @@ function HomePage() {
   const [savedQuickPlans, setSavedQuickPlans] = useState([]);
 
   const menuRef = useRef(null);
+  const savePlanModalRef = useRef(null);
   const navigate = useNavigate();
 
   const username = localStorage.getItem("username") || "";
@@ -185,6 +186,37 @@ function HomePage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!showPlanModal) return;
+
+    const modalEl = savePlanModalRef.current;
+    const focusableSelector =
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const focusable = modalEl ? Array.from(modalEl.querySelectorAll(focusableSelector)) : [];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    (first || modalEl)?.focus();
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setShowPlanModal(false);
+        return;
+      }
+      if (e.key === "Tab" && first && last) {
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showPlanModal]);
+
   return (
     <div className="min-h-screen bg-[#f0f4f3] flex flex-col">
       <header className="sticky top-0 z-10 bg-[#0F3B2E] border-b border-[#0a2a20] shadow-md">
@@ -261,15 +293,23 @@ function HomePage() {
       {showPlanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowPlanModal(false)} />
-          <div className="relative z-10 bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
-            <h2 className="text-base font-semibold text-[#1e293b] mb-4">
+          <div
+            ref={savePlanModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="save-plan-title"
+            tabIndex={-1}
+            className="relative z-10 bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4"
+          >
+            <h2 id="save-plan-title" className="text-base font-semibold text-[#1e293b] mb-4">
               Save Plan
             </h2>
 
             <div className="flex flex-col gap-3">
               <div>
-                <label className="block text-xs font-medium text-[#64748b] mb-1">Plan Name</label>
+                <label htmlFor="save-plan-name" className="block text-xs font-medium text-[#64748b] mb-1">Plan Name</label>
                 <input
+                  id="save-plan-name"
                   type="text"
                   placeholder="e.g. My Fall Schedule"
                   value={planName}
@@ -279,8 +319,9 @@ function HomePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#64748b] mb-1">Term ID</label>
+                <label htmlFor="save-plan-term-id" className="block text-xs font-medium text-[#64748b] mb-1">Term ID</label>
                 <input
+                  id="save-plan-term-id"
                   type="text"
                   placeholder="e.g. 202609"
                   value={planTermId}

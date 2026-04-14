@@ -38,7 +38,7 @@ const WeeklySchedule = forwardRef(({ registered, conflicts = new Set() }, ref) =
   }
 
 const getCourseBlocks = (day) => {
-  return registered
+  const rawBlocks = registered
     .filter((course) => {
       const parsed = parseMeetingDays(course.meetingDays || course.days || "");
       return parsed.includes(day);
@@ -49,39 +49,28 @@ const getCourseBlocks = (day) => {
       let start24;
       let end24;
 
-      const startMin = Number(course.startMin);
-      const endMin = Number(course.endMin);
+      const timeStr = course.meetingTime || course.time || "";
+      if (!timeStr || timeStr === "TBA") return null;
 
-      if (!Number.isNaN(startMin) && !Number.isNaN(endMin)) {
-        startFloat = startMin / 60;
-        endFloat = endMin / 60;
+      const parts = timeStr.split(" - ");
 
-        start24 = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")}`;
-        end24 = `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+      if (parts.length === 2) {
+        start24 = parseTo24h(parts[0].trim());
+        end24 = parseTo24h(parts[1].trim());
+
+        startFloat = timeToFloat(start24);
+        endFloat = timeToFloat(end24);
       } else {
-        const timeStr = course.meetingTime || course.time || "";
-        if (!timeStr || timeStr === "TBA") return null;
+        start24 = parseTo24h(timeStr);
+        startFloat = timeToFloat(start24);
 
-        const parts = timeStr.split(" - ");
+        if (Number.isNaN(startFloat)) return null;
 
-        if (parts.length === 2) {
-          start24 = parseTo24h(parts[0].trim());
-          end24 = parseTo24h(parts[1].trim());
+        const durationHours =
+          estimateDuration(course.meetingDays || course.days || "") / 60;
 
-          startFloat = timeToFloat(start24);
-          endFloat = timeToFloat(end24);
-        } else {
-          start24 = parseTo24h(timeStr);
-          startFloat = timeToFloat(start24);
-
-          if (Number.isNaN(startFloat)) return null;
-
-          const durationHours =
-            estimateDuration(course.meetingDays || course.days || "") / 60;
-
-          endFloat = startFloat + durationHours;
-          end24 = addMinutes(start24, durationHours * 60);
-        }
+        endFloat = startFloat + durationHours;
+        end24 = addMinutes(start24, durationHours * 60);
       }
 
       if (
@@ -103,6 +92,8 @@ const getCourseBlocks = (day) => {
         course,
         top,
         height,
+        startFloat,
+        endFloat,
         color: isConflict ? "#dc2626" : COLORS[colorIndex],
         start24,
         end24,
@@ -111,6 +102,58 @@ const getCourseBlocks = (day) => {
       };
     })
     .filter(Boolean);
+
+  const sortedBlocks = [...rawBlocks].sort(
+    (a, b) => a.startFloat - b.startFloat || a.endFloat - b.endFloat
+  );
+
+  const layoutGroup = (group) => {
+    const active = [];
+    const placed = [];
+    let maxColumns = 0;
+
+    group.forEach((block) => {
+      for (let i = active.length - 1; i >= 0; i--) {
+        if (active[i].endFloat <= block.startFloat) active.splice(i, 1);
+      }
+
+      const used = new Set(active.map((item) => item.columnIndex));
+      let columnIndex = 0;
+      while (used.has(columnIndex)) columnIndex += 1;
+
+      active.push({ endFloat: block.endFloat, columnIndex });
+      maxColumns = Math.max(maxColumns, columnIndex + 1);
+      placed.push({ ...block, columnIndex });
+    });
+
+    return placed.map((block) => ({ ...block, overlapColumns: maxColumns }));
+  };
+
+  const laidOut = [];
+  let group = [];
+  let groupEnd = -Infinity;
+
+  sortedBlocks.forEach((block) => {
+    if (!group.length) {
+      group = [block];
+      groupEnd = block.endFloat;
+      return;
+    }
+
+    if (block.startFloat < groupEnd) {
+      group.push(block);
+      groupEnd = Math.max(groupEnd, block.endFloat);
+      return;
+    }
+
+    laidOut.push(...layoutGroup(group));
+    group = [block];
+    groupEnd = block.endFloat;
+  });
+
+  if (group.length) laidOut.push(...layoutGroup(group));
+
+  return laidOut;
 };
 
   return (
@@ -139,7 +182,7 @@ const getCourseBlocks = (day) => {
             {timeLabels.map((label, i) => (
               <div
                 key={i}
-                className="flex items-start justify-end pr-2 text-[10px] text-[#94a3b8] border-b border-[#f1f5f9]"
+                className="flex items-start justify-end pr-2 text-[10px] text-[#64748B] border-b border-[#f1f5f9]"
                 style={{ height: "52px" }}
               >
                 {label}
@@ -169,13 +212,15 @@ const getCourseBlocks = (day) => {
                   ))}
 
                   {/* Course blocks */}
-                  {blocks.map(({ course, top, height, color, start24, end24, location, isConflict }) => (
+                  {blocks.map(({ course, top, height, color, start24, end24, location, isConflict, columnIndex, overlapColumns }) => (
                     <div
-                      key={course.crn}
-                      className="absolute left-0.5 right-0.5 rounded overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:z-10 hover:shadow-md"
+                      key={`${course.crn}-${course.meetingDays}-${course.meetingTime}-${columnIndex}`}
+                      className="absolute rounded overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:z-10 hover:shadow-md"
                       style={{
                         top: `${top}%`,
                         height: `${Math.max(height, 4)}%`,
+                        left: `calc(${(columnIndex * 100) / overlapColumns}% + 1px)`,
+                        width: `calc(${100 / overlapColumns}% - 2px)`,
                         backgroundColor: color,
                         outline: isConflict ? "2px solid #fca5a5" : "none",
                       }}
@@ -186,6 +231,11 @@ const getCourseBlocks = (day) => {
                           {isConflict && <span>⚠</span>}
                           {course.courseCode}
                         </div>
+                        {overlapColumns <= 2 && (
+                          <div className="text-[9px] opacity-95 break-words whitespace-normal">
+                            {course.name}
+                          </div>
+                        )}
                         <div className="text-[9px] opacity-90 break-words whitespace-normal">
                           {formatDisplayTime(start24)}
                         </div>
