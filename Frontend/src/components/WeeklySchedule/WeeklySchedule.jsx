@@ -37,38 +37,81 @@ const WeeklySchedule = forwardRef(({ registered, conflicts = new Set() }, ref) =
     timeLabels.push(`${display}:00 ${period}`);
   }
 
-  const getCourseBlocks = (day) => {
-    return registered
-      .filter((course) => {
-        const days = parseMeetingDays(course.meetingDays);
-        return days.includes(day);
-      })
-      .map((course) => {
-        const start24 = parseTo24h(course.meetingTime);
-        const duration = estimateDuration(course.meetingDays);
-        const end24 = addMinutes(start24, duration);
+const getCourseBlocks = (day) => {
+  return registered
+    .filter((course) => {
+      const parsed = parseMeetingDays(course.meetingDays || course.days || "");
+      return parsed.includes(day);
+    })
+    .map((course) => {
+      let startFloat;
+      let endFloat;
+      let start24;
+      let end24;
 
-        const startFloat = timeToFloat(start24);
-        const endFloat = timeToFloat(end24);
-        const top = ((startFloat - START_HOUR) / HOURS_RANGE) * 100;
-        const height = ((endFloat - startFloat) / HOURS_RANGE) * 100;
+      const startMin = Number(course.startMin);
+      const endMin = Number(course.endMin);
 
-        const colorIndex = hashCrn(course.crn) % COLORS.length;
-        const location = [course.building, course.room].filter(Boolean).join(" ");
-        const isConflict = conflicts.has(course.crn);
+      if (!Number.isNaN(startMin) && !Number.isNaN(endMin)) {
+        startFloat = startMin / 60;
+        endFloat = endMin / 60;
 
-        return {
-          course,
-          top,
-          height,
-          color: isConflict ? "#dc2626" : COLORS[colorIndex],
-          start24,
-          end24,
-          location,
-          isConflict,
-        };
-      });
-  };
+        start24 = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")}`;
+        end24 = `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+      } else {
+        const timeStr = course.meetingTime || course.time || "";
+        if (!timeStr || timeStr === "TBA") return null;
+
+        const parts = timeStr.split(" - ");
+
+        if (parts.length === 2) {
+          start24 = parseTo24h(parts[0].trim());
+          end24 = parseTo24h(parts[1].trim());
+
+          startFloat = timeToFloat(start24);
+          endFloat = timeToFloat(end24);
+        } else {
+          start24 = parseTo24h(timeStr);
+          startFloat = timeToFloat(start24);
+
+          if (Number.isNaN(startFloat)) return null;
+
+          const durationHours =
+            estimateDuration(course.meetingDays || course.days || "") / 60;
+
+          endFloat = startFloat + durationHours;
+          end24 = addMinutes(start24, durationHours * 60);
+        }
+      }
+
+      if (
+        Number.isNaN(startFloat) ||
+        Number.isNaN(endFloat) ||
+        endFloat <= startFloat
+      ) {
+        return null;
+      }
+
+      const top = ((startFloat - START_HOUR) / HOURS_RANGE) * 100;
+      const height = ((endFloat - startFloat) / HOURS_RANGE) * 100;
+
+      const colorIndex = hashCrn(String(course.crn || course.courseCode || course.name)) % COLORS.length;
+      const location = [course.building, course.room].filter(Boolean).join(" ");
+      const isConflict = conflicts.has(course.crn);
+
+      return {
+        course,
+        top,
+        height,
+        color: isConflict ? "#dc2626" : COLORS[colorIndex],
+        start24,
+        end24,
+        location,
+        isConflict,
+      };
+    })
+    .filter(Boolean);
+};
 
   return (
     <div ref={ref} className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm flex flex-col h-full">
