@@ -12,6 +12,10 @@ function getQuickPlanStorageKey(user) {
   return `quickPlans_${user}`;
 }
 
+function getQuickPlannerStateStorageKey(user) {
+  return `quickPlannerState_${user}`;
+}
+
 function normalizeCourse(raw) {
   return {
     ...raw,
@@ -31,6 +35,7 @@ function HomePage() {
   const [planLoading, setPlanLoading] = useState(false);
   const [showQuickPlanner, setShowQuickPlanner] = useState(false);
   const [savedQuickPlans, setSavedQuickPlans] = useState([]);
+  const [savedQuickPlannerState, setSavedQuickPlannerState] = useState(null);
   const [showAdminOverride, setShowAdminOverride] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerStatus, setRegisterStatus] = useState("");
@@ -60,6 +65,20 @@ function HomePage() {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setSavedQuickPlans(parsed);
+        }
+      }
+    } catch {
+      /* ignore corrupt data */
+    }
+  }, [username]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(getQuickPlannerStateStorageKey(username));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          setSavedQuickPlannerState(parsed);
         }
       }
     } catch {
@@ -210,6 +229,18 @@ function HomePage() {
   const handleApplyQuickPlan = (plan) => {
     setRegistered(plan);
     setShowQuickPlanner(false);
+  };
+
+  const handleSaveQuickPlannerState = (state) => {
+    setSavedQuickPlannerState(state);
+    try {
+      localStorage.setItem(
+        getQuickPlannerStateStorageKey(username),
+        JSON.stringify(state)
+      );
+    } catch {
+      /* storage full — silent fail */
+    }
   };
 
   useEffect(() => {
@@ -502,6 +533,8 @@ function HomePage() {
           onApplyPlan={handleApplyQuickPlan}
           savedPlans={savedQuickPlans}
           onSavePlans={handleSaveQuickPlans}
+          savedPlannerState={savedQuickPlannerState}
+          onSavePlannerState={handleSaveQuickPlannerState}
         />
       )}
 
