@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import CourseDetails from "../CourseDetails/CourseDetails";
-import { findConflictingCourses } from "../../utils/courseUtils";
+import { findConflictingCourses, formatMeetingDaysForDisplay } from "../../utils/courseUtils";
 import AvailableSeats from "../AvailableSeats/AvailableSeats";
 
 const TERM_MAP = {
@@ -16,6 +16,13 @@ const SORT_OPTIONS = [
 ];
 
 const ALL_DAYS = ["M", "T", "W", "R", "F"];
+const DAY_FILTER_LABELS = {
+  M: "M",
+  T: "TU",
+  W: "W",
+  R: "TR",
+  F: "F",
+};
 
 function normalizeCourse(raw) {
   return {
@@ -289,7 +296,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
                         : "bg-white text-[#475569] border-[#e2e8f0] hover:border-[#0F3B2E]"
                     }`}
                   >
-                    {day}
+                    {DAY_FILTER_LABELS[day] || day}
                   </button>
                 ))}
               </div>
@@ -392,7 +399,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
                             </button>
 
                             <div className="flex flex-wrap gap-x-4 gap-y-1">
-                              <span className="text-sm text-[#475569]">📅 {course.meetingDays} · {course.meetingTime}</span>
+                              <span className="text-sm text-[#475569]">📅 {formatMeetingDaysForDisplay(course.meetingDays)} · {course.meetingTime}</span>
                               <span className="text-sm text-[#475569]">🎓 {course.credits} credits</span>
                               <span className="text-sm text-[#475569]">👤 {course.instructor}</span>
                               <span className="text-sm text-[#475569]">📍 {course.location}</span>

@@ -1,3 +1,5 @@
+import { formatMeetingDaysForDisplay } from "../../utils/courseUtils";
+
 export default function CourseDetails({ course, onClose }) {
     if (!course) return null;
     return (
@@ -30,7 +32,7 @@ export default function CourseDetails({ course, onClose }) {
 
                 <p className="mb-3"><strong>Instructor / Meeting Times:</strong><br />
                     Instructor: {course.instructor}<br />
-                    {course.meetingDays} {course.meetingTime}<br />
+                    {formatMeetingDaysForDisplay(course.meetingDays)} {course.meetingTime}<br />
                      Main Campus | {course.building} | Room {course.room}
                 </p>
 

@@ -4,6 +4,7 @@ import {
   parseTo24h,
   timeToFloat,
   estimateDuration,
+  formatMeetingDaysForDisplay,
 } from "../../utils/courseUtils";
 import ComparePlans from "../ComparePlans/ComparePlans";
 
@@ -496,7 +497,7 @@ export default function QuickPlanner({
                               {c.courseCode}
                             </span>
                             <span className="text-[#475569] whitespace-nowrap">
-                              {c.meetingDays} {c.meetingTime}
+                              {formatMeetingDaysForDisplay(c.meetingDays)} {c.meetingTime}
                             </span>
                             <span className="text-[#64748b] text-xs truncate min-w-0">
                               {c.instructor}

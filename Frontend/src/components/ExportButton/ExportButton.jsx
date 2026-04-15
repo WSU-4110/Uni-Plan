@@ -2,7 +2,7 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import {
     parseMeetingDays, parseTo24h, addMinutes,
-    estimateDuration, timeToFloat,
+    estimateDuration, timeToFloat, formatMeetingDaysForDisplay,
 } from "../../utils/courseUtils";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -125,7 +125,7 @@ export default function ExportButton({ registered, conflicts = new Set() }) {
             }, course.name));
             item.appendChild(el("div", {
                 fontSize: "8px", color: "#64748b", marginTop: "2px",
-            }, `${course.credits} cr · ${course.meetingDays} ${course.meetingTime}${location ? ` · ${location}` : ""}`));
+            }, `${course.credits} cr · ${formatMeetingDaysForDisplay(course.meetingDays)} ${course.meetingTime}${location ? ` · ${location}` : ""}`));
             courseList.appendChild(item);
         });
         leftPanel.appendChild(courseList);

@@ -4,6 +4,7 @@ import {
   addMinutes,
   estimateDuration,
   timeToFloat,
+  formatMeetingDaysForDisplay,
 } from "../../utils/courseUtils";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -173,7 +174,7 @@ function PlanColumn({
             >
               <span className="font-bold text-[#0f172a]">{c.courseCode}</span>
               <span className="text-[#334155]">
-                {c.meetingDays} {c.meetingTime}
+                {formatMeetingDaysForDisplay(c.meetingDays)} {c.meetingTime}
               </span>
               {c.instructor && (
                 <span className="text-xs text-[#64748b] w-full sm:w-auto truncate">
