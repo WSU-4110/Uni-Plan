@@ -31,7 +31,7 @@ const WeeklySchedule = forwardRef(({ registered, conflicts = new Set() }, ref) =
   const conflictCount = conflicts.size;
 
   const timeLabels = [];
-  for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
+  for (let hour = START_HOUR; hour < END_HOUR; hour++) {
     const period = hour >= 12 ? "PM" : "AM";
     const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
     timeLabels.push(`${display}:00 ${period}`);
