@@ -646,22 +646,22 @@ export default function QuickPlanner({
                       {entries.length > 0 ? (
                         <div className="flex flex-wrap gap-2 mt-2">
                           {entries.map(([courseKey, sections]) => (
-                            <span
+                  <span
                               key={courseKey}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0F3B2E] text-white text-xs font-medium rounded-full"
-                            >
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0F3B2E] text-white text-xs font-medium rounded-full"
+                  >
                               {courseKey} ({sections.length})
-                              <button
+                    <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   removeCourseFromGroup(group.id, courseKey);
                                 }}
-                                className="ml-0.5 hover:text-red-200 transition"
-                              >
-                                ×
-                              </button>
-                            </span>
-                          ))}
+                      className="ml-0.5 hover:text-red-200 transition"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
                         </div>
                       ) : (
                         <p className="text-xs text-[#64748b] mt-2">
@@ -805,7 +805,7 @@ export default function QuickPlanner({
                               {c.courseCode}
                             </span>
                             <span className="text-[#475569] whitespace-nowrap">
-                              {formatMeetingDaysForDisplay(c.meetingDays)} {c.meetingTime}
+                              {c.meetingDays} {c.meetingTime}
                             </span>
                             <span className="text-[#64748b] text-xs truncate min-w-0">
                               {c.instructor}
