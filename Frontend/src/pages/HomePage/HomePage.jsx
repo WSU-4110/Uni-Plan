@@ -15,6 +15,11 @@ function getQuickPlannerStateStorageKey(user) {
   return `quickPlannerState_${user}`;
 }
 
+const TERM_ID_TO_LABEL = {
+  "202601": "Spring/Summer 2026",
+  "202609": "Fall 2026",
+};
+
 function normalizeCourse(raw) {
   return {
     ...raw,
@@ -101,6 +106,22 @@ function HomePage() {
   }, [username]);
 
   const conflicts = useMemo(() => detectConflicts(registered), [registered]);
+
+  const scheduleTerm = useMemo(() => {
+    if (registered.length === 0) return "";
+    const terms = new Set(registered.map((c) => c.term).filter(Boolean));
+    if (terms.size === 1) {
+      const termId = [...terms][0];
+      return TERM_ID_TO_LABEL[termId] || "";
+    }
+    return "";
+  }, [registered]);
+
+  const hasMixedTerms = useMemo(() => {
+    if (registered.length <= 1) return false;
+    const terms = new Set(registered.map((c) => c.term).filter(Boolean));
+    return terms.size > 1;
+  }, [registered]);
 
   const handleAddCourse = (course) => {
     setRegistered((prev) => [...prev, course]);
@@ -322,12 +343,15 @@ function HomePage() {
             </button>
             <button
               onClick={handleRegister}
-              disabled={registerLoading || registered.length === 0}
+              disabled={registerLoading || registered.length === 0 || hasMixedTerms}
+              title={hasMixedTerms ? "Cannot register courses from different semesters" : ""}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition border ${
                 registerStatus === "registered"
                   ? "bg-green-600 border-green-500 text-white"
                   : registerStatus === "error"
                   ? "bg-red-600 border-red-500 text-white"
+                  : hasMixedTerms
+                  ? "bg-gray-400 border-gray-300 text-white cursor-not-allowed"
                   : "bg-[#b45309] border-[#d97706] text-white hover:bg-[#92400e] disabled:opacity-40"
               }`}
             >
@@ -337,6 +361,8 @@ function HomePage() {
                 ? "Registered!"
                 : registerStatus === "error"
                 ? "Failed"
+                : hasMixedTerms
+                ? "Mixed Terms"
                 : "Register"}
             </button>
           </div>
@@ -497,6 +523,7 @@ function HomePage() {
             onAddCourse={handleAddCourse}
             onRemoveCourse={handleRemoveCourse}
             conflicts={conflicts}
+            scheduleTerm={scheduleTerm}
           />
         </div>
 

@@ -44,7 +44,7 @@ function sortResults(results, sortBy, sortOrder) {
   });
 }
 
-export default function CourseSearch({ registered = [], onAddCourse, onRemoveCourse, conflicts = new Set(), bypassCreditLimit = false }) {
+export default function CourseSearch({ registered = [], onAddCourse, onRemoveCourse, conflicts = new Set(), bypassCreditLimit = false, scheduleTerm = "" }) {
   const [courseSubject, setCourseSubject] = useState("");
   const [courseNumber, setCourseNumber] = useState("");
   const [crnSearch, setCrnSearch] = useState("");
@@ -64,6 +64,12 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
   const [filterInstructor, setFilterInstructor] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [conflictMessage, setConflictMessage] = useState("");
+
+  useEffect(() => {
+    if (scheduleTerm && TERM_MAP[scheduleTerm]) {
+      setTerm(scheduleTerm);
+    }
+  }, [scheduleTerm]);
 
   const totalCredits = registered.reduce((sum, c) => sum + (c.credits || 0), 0);
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -101,6 +107,11 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
   }, [selectedCourse]);
 
   const handleSearch = async () => {
+    if (!term) {
+      setErrorMessage("Please select a semester before searching.");
+      return;
+    }
+
     setHasSearched(true);
     setLoading(true);
     setErrorMessage("");
@@ -113,10 +124,9 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
 
       const q = crn || num || subj;
 
-      const params = new URLSearchParams({ limit: "200" });
-      if (q) params.set("q", q);
       const termId = TERM_MAP[term];
-      if (termId) params.set("term_id", termId);
+      const params = new URLSearchParams({ limit: "200", term_id: termId });
+      if (q) params.set("q", q);
 
       const res = await fetch(`/api/courses/search?${params}`);
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -230,7 +240,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
             aria-label="Select term"
             className="sm:w-52 px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
           >
-            <option value="">All Semesters</option>
+            <option value="">Select Semester</option>
             <option value="Spring/Summer 2026">Spring/Summer 2026</option>
             <option value="Fall 2026">Fall 2026</option>
           </select>
@@ -268,7 +278,7 @@ export default function CourseSearch({ registered = [], onAddCourse, onRemoveCou
             />
             <button
               onClick={handleSearch}
-              disabled={loading}
+              disabled={loading || !term}
               className="px-4 py-2 bg-[#0F3B2E] hover:bg-[#0a2a20] disabled:opacity-50 text-white text-sm font-medium rounded-md transition whitespace-nowrap"
             >
               {loading ? "Searching…" : "Search"}
