@@ -1,6 +1,6 @@
 # Uni-Plan
 
-**Live**: [wsu-uniplan.vercel.app](http://wsu-uniplan.vercel.app/)
+**Live**: [wsu-uniplan](http://wsu-uniplan.vercel.app/)
 
 Uni-Plan is a web-based university course planning and registration support tool.  
 Students can search courses, detect timetable conflicts, save/load multiple plans, and generate schedule combinations with Quick Planner.  
