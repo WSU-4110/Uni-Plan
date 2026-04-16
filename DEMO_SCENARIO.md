@@ -3,7 +3,7 @@
 ## Environment
 
 - **URL**: `http://wsu-uniplan.vercel.app/`
-- **Student account**: username `jimin`, password `0000`
+- **Student account**: username `jimin`, password `(ask to our team for security)` 
 - **Admin account**: username `admin1`, password `(ask to our team for security)` 
 
 ---
@@ -80,10 +80,13 @@
 
 18. Click **Save Plan** in the header.
     - Enter plan name: `Demo Plan` and term.
-   <img width="523" height="371" alt="Screenshot 2026-04-16 at 12 42 53 AM" src="https://github.com/user-attachments/assets/e86458e7-7607-4f9b-a889-0e2e0643b031" />
 
-    - Click Save → success confirmation.
-    <img width="458" height="145" alt="Screenshot 2026-04-16 at 12 13 24 AM" src="https://github.com/user-attachments/assets/dd51098a-2457-48f8-b2a9-2e104de0d102" />
+<img width="523" height="371" alt="Screenshot 2026-04-16 at 12 42 53 AM" src="https://github.com/user-attachments/assets/e86458e7-7607-4f9b-a889-0e2e0643b031" />
+
+   - Click Save → success confirmation.
+   
+<img width="458" height="145" alt="Screenshot 2026-04-16 at 12 13 24 AM" src="https://github.com/user-attachments/assets/dd51098a-2457-48f8-b2a9-2e104de0d102" />
+
 
     
 19. Remove all courses from the current schedule.
@@ -91,8 +94,8 @@
 20. Click **Load Plan** in the header.
     - A list of saved plans appears (including `Demo Plan`).
     - Select `Demo Plan` → the saved courses reload into the schedule.
-      https://github.com/user-attachments/assets/e5592da3-7375-42e5-a870-9fb8699cc274
 
+https://github.com/user-attachments/assets/e5592da3-7375-42e5-a870-9fb8699cc274
 
 
 ---
@@ -101,9 +104,11 @@
 
 21. With a valid schedule loaded (single term, no mixed terms), click **Register**.
 22. Confirm the registration prompt → courses are persisted as the registered schedule on the server.
+
 <img width="526" height="247" alt="Screenshot 2026-04-16 at 12 44 00 AM" src="https://github.com/user-attachments/assets/0a9c2eaa-5026-4a57-b319-44a71654e378" />
 
 23. The registered seat counts update on the backend.
+
 <img width="193" height="129" alt="Screenshot 2026-04-16 at 12 44 22 AM" src="https://github.com/user-attachments/assets/062af785-a69d-4a24-82b2-966edb7dc72c" />
 
 
@@ -112,6 +117,8 @@
 ## Part 6: Quick Planner
 
 24. Click **Quick Planner** in the header → full-screen modal opens.
+
+
 <img width="477" height="64" alt="Screenshot 2026-04-16 at 12 44 40 AM" src="https://github.com/user-attachments/assets/56aaa8bc-4edb-4fcd-9443-c1a9727f6668" />
 
 25. **Add course groups**:
@@ -123,16 +130,19 @@
     - Toggle **Friday Off** preference.
     - Toggle **No Morning Classes** preference.
 27. Click **Generate** → the system returns conflict-free schedule combinations.
+
 https://github.com/user-attachments/assets/a76d5c4e-97b5-4ad5-8852-c81881ce4b5b
 
 
 28. **Browse generated plans**: You can see only 6 plans at once.
 <img width="868" height="644" alt="Screenshot 2026-04-16 at 12 47 55 AM" src="https://github.com/user-attachments/assets/d1b5764b-a057-41e9-a329-b182cfa8508e" />
 29. Click **Regenerate** to cycle through additional pages of results.
+
 https://github.com/user-attachments/assets/3880af83-9302-47d7-a493-96b82e571766
 
 30. **Compare plans**: Select two generated plans and click **Compare** → side-by-side mini weekly grids appear showing both plans.
 31. Pick the preferred plan and click **Apply Plan** → the selected schedule replaces the current schedule on the main HomePage. The Quick Planner modal closes.
+
 https://github.com/user-attachments/assets/7555d464-0798-4027-adaf-a24e850a6f65
 
 32. Verify the applied schedule appears correctly in My Schedule and Weekly Schedule.
@@ -158,17 +168,32 @@ https://github.com/user-attachments/assets/7555d464-0798-4027-adaf-a24e850a6f65
 > This section demonstrates admin override that bypasses the 18-credit cap.
 
 35. **Log out** from the student account (click user menu → Logout).
+<img width="479" height="149" alt="Screenshot 2026-04-16 at 12 57 33 AM" src="https://github.com/user-attachments/assets/0d05b266-1141-4f3e-ad29-f11cb512276c" />
+
+
 36. On the login page, switch to **Administrator** mode.
+<img width="181" height="103" alt="Screenshot 2026-04-16 at 12 57 22 AM" src="https://github.com/user-attachments/assets/01599cff-cf59-4d4e-833b-1f27b5578e10" />
+<img width="588" height="541" alt="Screenshot 2026-04-16 at 12 57 56 AM" src="https://github.com/user-attachments/assets/e49741fa-afbb-48f6-8aac-f1021316d55e" />
+
 37. Log in as `admin1` → redirected to `/admin` (Admin Page).
+<img width="1419" height="704" alt="Screenshot 2026-04-16 at 12 58 22 AM" src="https://github.com/user-attachments/assets/e3be22db-ccf9-44a0-8faf-f0b592feb6ff" />
+
 38. In the **Student ID** field, enter `jimin` and click **Search**.
 39. The admin panel loads `jimin`'s currently **registered** schedule.
+<img width="1047" height="704" alt="Screenshot 2026-04-16 at 12 58 38 AM" src="https://github.com/user-attachments/assets/c727f7c7-3968-4f21-bb18-69be37e6af39" />
+
 40. The admin can see all of jimin's registered courses displayed in the schedule grid.
 41. **Add courses beyond 18 credits**:
     - Use the Course Search panel (which has `bypassCreditLimit` enabled in admin mode).
     - Add courses until the total credits **exceed 18** — no error is shown because the admin bypasses the credit cap.
     - The credit display shows the overridden total (e.g., `21 / 18`) with an **(override)** label and **red** styling.
+    
+
 42. Click **Force Save** → the overridden schedule is saved as jimin's registered schedule.
 43. Confirm the success message.
+
+https://github.com/user-attachments/assets/7fd3838e-9e06-41e5-8c57-050b0005c621
+
 
 ---
 
@@ -179,9 +204,12 @@ https://github.com/user-attachments/assets/7555d464-0798-4027-adaf-a24e850a6f65
 46. Log in again as `jimin` → redirected to `/home`.
 47. The page auto-loads the registered schedule from the server.
 48. **Refresh the page** (F5 / Cmd+R) to confirm data persists.
+
+
+https://github.com/user-attachments/assets/6935558b-7423-4025-b1b0-f77a82906992
+
+
 49. Verify the schedule now shows **more than 18 credits** (e.g., `21 / 18`):
-    - The **credit badge** in My Schedule is **red**.
-    - The **Weekly Schedule** footer shows the exceeded credit total in **red**.
     - The student **cannot add** more courses (still capped by the student-side 18-credit rule), but the admin-overridden courses remain.
 
 ---
@@ -191,7 +219,12 @@ https://github.com/user-attachments/assets/7555d464-0798-4027-adaf-a24e850a6f65
 50. Optionally remove extra courses to bring credits back under 18.
 51. Click **Register** to save the updated schedule.
 52. Click the user menu → **Logout** → redirected back to `/login`.
+
+https://github.com/user-attachments/assets/2f0270a2-b7b7-4521-ba0e-3cc6fb4d9054
+
+
 53. Verify that navigating to `/home` or `/admin` directly redirects back to `/login` (auth guard).
+- students cannot access the admin panel, and admins cannot access the student registration page.
 
 ---
 
