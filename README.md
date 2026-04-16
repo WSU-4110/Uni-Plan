@@ -1,5 +1,7 @@
 # Uni-Plan
 
+**Live**: [wsu-uniplan.vercel.app](http://wsu-uniplan.vercel.app/)
+
 Uni-Plan is a web-based university course planning and registration support tool.  
 Students can search courses, detect timetable conflicts, save/load multiple plans, and generate schedule combinations with Quick Planner.  
 Admins can review a student's registered schedule and apply override actions (forced registration updates).
@@ -20,8 +22,8 @@ Admins can review a student's registered schedule and apply override actions (fo
 - Registered plan workflow
   - Persists current registration in a reserved plan name: `__registered__`
 - Quick Planner generation
-  - Builds conflict-free schedule combinations from selected course groups
-  - Supports preferences like Friday off and no morning classes
+  - **Group selection**: search results are grouped by course code; selecting a group means "I need this course — any section is fine." The planner computes the cartesian product of all selected groups (one section per group) and discards every combination that has a time conflict, returning only valid, conflict-free schedules.
+  - Supports preferences like Friday off and no morning classes (before 10 AM)
   - Supports side-by-side comparison for two generated plans
 - PDF export
   - Exports schedule grid + selected courses into a downloadable PDF
@@ -192,7 +194,7 @@ Base prefix: `/api`
 
 - Credit cap: student flow blocks adding courses above 18 credits.
 - Conflicts: conflicting courses can still be added, but warnings/highlights are shown.
-- Term mapping: frontend currently uses fixed term IDs (`202601`, `202609`).
+- Term mapping: frontend currently uses fixed term IDs (`202601`, `202609`). **Fall 2026 data is currently empty** — use Spring/Summer 2026 for testing.
 - Auth storage: session state is stored in browser `localStorage`.
 - CORS: backend currently allows all origins (`allow_origins=["*"]`) for development convenience.
 
@@ -203,6 +205,10 @@ Based on `vercel.json`:
 - `/api/(.*)` rewrites to `/api/index.py`
 - all other routes rewrite to SPA entry (`index.html`)
 - serverless function includes `Backend/**` files
+
+## Demo Scenario
+
+For a step-by-step walkthrough covering every feature, see [DEMO_SCENARIO.md](DEMO_SCENARIO.md).
 
 ## Verification Checklist
 

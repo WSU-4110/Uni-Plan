@@ -2,7 +2,7 @@
 
 ## Environment
 
-- **URL**: `http://wsu-uniplan.vercel.app/login`
+- **URL**: `http://wsu-uniplan.vercel.app/`
 - **Student account**: username `jimin`, password `0000`
 - **Admin account**: username `admin1`, password `(ask to our team for security)` 
 
