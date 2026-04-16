@@ -67,32 +67,38 @@ This architecture gives a no-full-reload user experience for search, filtering, 
 Uni-Plan/
 ├─ Frontend/                 # React + Vite
 │  ├─ src/
-│  │  ├─ pages/              # Login/Home/Admin
-│  │  ├─ components/         # CourseSearch, WeeklySchedule, QuickPlanner, etc.
+│  │  ├─ pages/              # LoginPage, HomePage, AdminPage
+│  │  ├─ components/         # CourseSearch, WeeklySchedule, QuickPlanner,
+│  │  │                      # MySchedule, ComparePlans, CourseDetails,
+│  │  │                      # AdminOverride, ExportButton, AvailableSeats,
+│  │  │                      # ErrorMessage
 │  │  └─ utils/              # Conflict/time parsing utilities
 │  └─ vite.config.js
 ├─ Backend/                  # FastAPI
 │  ├─ routers/               # auth, courses, plans, admin, generator
 │  ├─ services/              # plan/auth service logic
 │  ├─ schemas/               # request/response models
+│  ├─ parsers/               # Course data import scripts
 │  ├─ db.py                  # DB connection
 │  └─ main.py                # FastAPI app
 ├─ api/
 │  └─ index.py               # serverless entrypoint
+├─ .github/                  # PR template
 ├─ vercel.json               # deployment rewrites/function config
+├─ DEMO_SCENARIO.md          # step-by-step demo walkthrough
 └─ README.md
 ```
 
 ## Quick Start
 
-## Prerequisites
+### Prerequisites
 
 - Node.js `>= 20.19.0`
 - pnpm `>= 8`
 - Python 3.10+ (recommended)
 - PostgreSQL connection info
 
-## 1) Install dependencies
+### 1) Install dependencies
 
 From project root:
 
@@ -108,7 +114,7 @@ source .venv/bin/activate
 pip install -r Backend/requirements.txt
 ```
 
-## 2) Configure environment variables
+### 2) Configure environment variables
 
 Set database env vars in `Backend/.env` (or runtime environment).
 
@@ -123,7 +129,7 @@ DB_PASSWORD=your_password
 DB_PORT=5432
 ```
 
-## 3) Run backend
+### 3) Run backend
 
 From project root:
 
@@ -132,7 +138,7 @@ source .venv/bin/activate
 uvicorn Backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## 4) Run frontend
+### 4) Run frontend
 
 In a new terminal, from project root:
 
