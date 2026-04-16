@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import { formatMeetingDaysForDisplay } from "../../utils/courseUtils";
 
 function MySchedule({ courses, onRemove, totalCredits }, ref) {
   return (
@@ -32,7 +33,7 @@ function MySchedule({ courses, onRemove, totalCredits }, ref) {
                   {course.name}
                 </p>
                 <p className="text-xs text-[#64748b] break-words whitespace-normal">
-                  {course.courseCode} · {course.credits} cr · {course.meetingDays} {course.meetingTime}
+                  {course.courseCode} · {course.credits} cr · {formatMeetingDaysForDisplay(course.meetingDays)} {course.meetingTime}
                 </p>
               </div>
               <button

@@ -1,10 +1,4 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import {
-  parseMeetingDays,
-  parseTo24h,
-  timeToFloat,
-  estimateDuration,
-} from "../../utils/courseUtils";
 import ComparePlans from "../ComparePlans/ComparePlans";
 
 const TERM_MAP = {
@@ -14,6 +8,13 @@ const TERM_MAP = {
 
 const PLANS_PER_PAGE = 3;
 const MAX_PLANS = 50;
+const NO_MORNING_START_TIME = 12 * 60;
+const NO_TIME_CONSTRAINT = 0;
+const MAX_COMBINATIONS = 40;
+
+function getDefaultPlannerGroups() {
+  return [{ id: 1, name: "Group 1", courseOptions: {} }];
+}
 
 function normalizeCourse(raw) {
   return {
@@ -24,41 +25,48 @@ function normalizeCourse(raw) {
   };
 }
 
-function getTimeRange(course) {
-  const timeStr = course.meetingTime || course.time || "";
-  if (!timeStr || timeStr === "TBA") return null;
-
-  const parts = timeStr.split(" - ");
-  if (parts.length === 2) {
-    const s = timeToFloat(parseTo24h(parts[0].trim()));
-    const e = timeToFloat(parseTo24h(parts[1].trim()));
-    if (!isNaN(s) && !isNaN(e)) return { start: s, end: e };
+function getGroupMeta(course) {
+  const subject = String(course.subject || "").trim().toUpperCase();
+  const courseNumber = String(course.courseNumber ?? course.number ?? "").trim();
+  if (subject && courseNumber) {
+    return {
+      key: `${subject}-${courseNumber}`,
+      label: `${subject}${courseNumber}`,
+    };
   }
 
-  const s = timeToFloat(parseTo24h(timeStr));
-  if (!isNaN(s)) {
-    return { start: s, end: s + estimateDuration(course.meetingDays) / 60 };
+  const courseCode = String(course.courseCode || "").trim();
+  const matched = courseCode.match(/^([A-Za-z]+)\s*([0-9A-Za-z]+)$/);
+  if (matched) {
+    const parsedSubject = matched[1].toUpperCase();
+    const parsedNumber = matched[2];
+    return {
+      key: `${parsedSubject}-${parsedNumber}`,
+      label: `${parsedSubject}${parsedNumber}`,
+    };
   }
-  return null;
+
+  return {
+    key: courseCode || String(course.crn || Math.random()),
+    label: courseCode || "Course",
+  };
 }
 
-function sectionsOverlap(a, b) {
-  const daysA = parseMeetingDays(a.meetingDays);
-  const daysB = parseMeetingDays(b.meetingDays);
-  if (!daysA.some((d) => daysB.includes(d))) return false;
-  const ra = getTimeRange(a);
-  const rb = getTimeRange(b);
-  if (!ra || !rb) return false;
-  return ra.start < rb.end && rb.start < ra.end;
-}
-
-function comboHasConflict(combo) {
-  for (let i = 0; i < combo.length; i++) {
-    for (let j = i + 1; j < combo.length; j++) {
-      if (sectionsOverlap(combo[i], combo[j])) return true;
-    }
+function parseCourseIdentifier(section) {
+  const subject = String(section.subject || "").trim();
+  const courseNumber = String(section.courseNumber ?? section.number ?? "").trim();
+  if (subject && courseNumber) {
+    return { subject: subject.toUpperCase(), course_number: courseNumber };
   }
-  return false;
+
+  const courseCode = String(section.courseCode || "").trim();
+  const matched = courseCode.match(/^([A-Za-z]+)\s*([0-9A-Za-z]+)$/);
+  if (!matched) return null;
+
+  return {
+    subject: matched[1].toUpperCase(),
+    course_number: matched[2],
+  };
 }
 
 function cartesianProduct(arrays) {
@@ -68,19 +76,104 @@ function cartesianProduct(arrays) {
   );
 }
 
+function buildConstraints(preferNoFriday, preferNoMorning) {
+  const days = [];
+  if (preferNoFriday) days.push("friday");
+
+  const startTime = preferNoMorning ? NO_MORNING_START_TIME : NO_TIME_CONSTRAINT;
+  return { days, startTime };
+}
+
+function buildSectionLookup(plannerGroups) {
+  const byCourseId = new Map();
+
+  plannerGroups.forEach((group) => {
+    Object.values(group.courseOptions).forEach((sections) => {
+      sections.forEach((section) => {
+        if (section.courseId) byCourseId.set(section.courseId, section);
+      });
+    });
+  });
+
+  return { byCourseId };
+}
+
+function normalizeWeekDaysFromSlot(slot) {
+  let days = "";
+  if (slot?.monday) days += "M";
+  if (slot?.tuesday) days += "T";
+  if (slot?.wednesday) days += "W";
+  if (slot?.thursday) days += "R";
+  if (slot?.friday) days += "F";
+  return days || "TBA";
+}
+
+function toDisplayTime(totalMin) {
+  if (typeof totalMin !== "number") return "";
+  const h24 = Math.floor(totalMin / 60);
+  const mm = totalMin % 60;
+  const period = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${String(mm).padStart(2, "0")} ${period}`;
+}
+
+function normalizeMeetingTimeFromSlot(slot) {
+  if (!slot || typeof slot.start_min !== "number" || typeof slot.end_min !== "number") {
+    return "TBA";
+  }
+  return `${toDisplayTime(slot.start_min)} - ${toDisplayTime(slot.end_min)}`;
+}
+
+function hydrateSchedules(rawSchedules, plannerGroups) {
+  const { byCourseId } = buildSectionLookup(plannerGroups);
+  return (rawSchedules || [])
+    .map((schedule) =>
+      schedule
+        .map((item) => {
+          const matched = byCourseId.get(item.course_id);
+          if (matched) return matched;
+
+          return {
+            crn: `gen-${item.course_id}-${item.time_slot?.start_min ?? "na"}-${item.time_slot?.end_min ?? "na"}`,
+            courseId: item.course_id,
+            courseCode: `COURSE ${item.course_id}`,
+            name: `Course ${item.course_id}`,
+            instructor: "TBA",
+            meetingDays: normalizeWeekDaysFromSlot(item.time_slot),
+            meetingTime: normalizeMeetingTimeFromSlot(item.time_slot),
+            credits: 0,
+          };
+        })
+        .filter(Boolean)
+    )
+    .filter((schedule) => schedule.length > 0);
+}
+
 export default function QuickPlanner({
   onClose,
   onApplyPlan,
   savedPlans,
   onSavePlans,
+  savedPlannerState,
+  onSavePlannerState,
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [courseSubject, setCourseSubject] = useState("");
+  const [courseNumber, setCourseNumber] = useState("");
+  const [crnSearch, setCrnSearch] = useState("");
   const [term, setTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedGroups, setSelectedGroups] = useState({});
-  const [preferNoFriday, setPreferNoFriday] = useState(false);
-  const [preferNoMorning, setPreferNoMorning] = useState(false);
+  const [plannerGroups, setPlannerGroups] = useState(
+    Array.isArray(savedPlannerState?.plannerGroups) && savedPlannerState.plannerGroups.length > 0
+      ? savedPlannerState.plannerGroups
+      : getDefaultPlannerGroups()
+  );
+  const [activeGroupId, setActiveGroupId] = useState(
+    Number.isInteger(savedPlannerState?.activeGroupId) ? savedPlannerState.activeGroupId : 1
+  );
+  const [selectedSearchKeys, setSelectedSearchKeys] = useState({});
+  const [preferNoFriday, setPreferNoFriday] = useState(!!savedPlannerState?.preferNoFriday);
+  const [preferNoMorning, setPreferNoMorning] = useState(!!savedPlannerState?.preferNoMorning);
   const [plans, setPlans] = useState(savedPlans || []);
   const [pageIndex, setPageIndex] = useState(0);
   const [generating, setGenerating] = useState(false);
@@ -90,6 +183,27 @@ export default function QuickPlanner({
   const [compareSelection, setCompareSelection] = useState([]);
   const [showCompare, setShowCompare] = useState(false);
   const quickPlannerModalRef = useRef(null);
+
+  useEffect(() => {
+    if (!Array.isArray(plannerGroups) || plannerGroups.length === 0) {
+      setPlannerGroups(getDefaultPlannerGroups());
+      setActiveGroupId(1);
+      return;
+    }
+
+    if (!plannerGroups.some((group) => group.id === activeGroupId)) {
+      setActiveGroupId(plannerGroups[0].id);
+    }
+  }, [plannerGroups, activeGroupId]);
+
+  useEffect(() => {
+    onSavePlannerState?.({
+      plannerGroups,
+      activeGroupId,
+      preferNoFriday,
+      preferNoMorning,
+    });
+  }, [plannerGroups, activeGroupId, preferNoFriday, preferNoMorning, onSavePlannerState]);
 
   useEffect(() => {
     const modalEl = quickPlannerModalRef.current;
@@ -123,17 +237,35 @@ export default function QuickPlanner({
   }, [onClose]);
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
     setSearchLoading(true);
     try {
+      const subj = courseSubject.trim();
+      const num = courseNumber.trim();
+      const crn = crnSearch.trim();
+      const q = crn || num || subj;
+
       const params = new URLSearchParams({ limit: "200" });
-      params.set("q", searchQuery.trim());
+      if (q) params.set("q", q);
       const termId = TERM_MAP[term];
       if (termId) params.set("term_id", termId);
       const res = await fetch(`/api/courses/search?${params}`);
       if (!res.ok) throw new Error("Search failed");
       const data = await res.json();
-      setSearchResults((data.results ?? []).map(normalizeCourse));
+      let results = (data.results ?? []).map(normalizeCourse);
+      if (subj) {
+        results = results.filter((c) =>
+          (c.subject || "").toLowerCase().includes(subj.toLowerCase())
+        );
+      }
+      if (num) {
+        results = results.filter((c) =>
+          (c.courseNumber ?? c.number ?? "").toLowerCase().includes(num.toLowerCase())
+        );
+      }
+      if (crn) {
+        results = results.filter((c) => (c.crn || "").includes(crn));
+      }
+      setSearchResults(results);
     } catch {
       setSearchResults([]);
     } finally {
@@ -144,9 +276,11 @@ export default function QuickPlanner({
   const groupedResults = useMemo(() => {
     const groups = {};
     for (const c of searchResults) {
-      const key = c.courseCode;
+      const { key, label } = getGroupMeta(c);
       if (!groups[key])
         groups[key] = {
+          key,
+          shortLabel: label,
           courseCode: key,
           name: c.name,
           credits: c.credits,
@@ -157,63 +291,140 @@ export default function QuickPlanner({
     return Object.values(groups);
   }, [searchResults]);
 
-  const toggleGroup = (group) => {
-    setSelectedGroups((prev) => {
+  const toggleSearchCourse = (group) => {
+    setSelectedSearchKeys((prev) => {
       const next = { ...prev };
       if (next[group.courseCode]) delete next[group.courseCode];
-      else next[group.courseCode] = group.sections;
+      else next[group.courseCode] = true;
       return next;
     });
   };
 
-  const removeGroup = (code) => {
-    setSelectedGroups((prev) => {
-      const next = { ...prev };
-      delete next[code];
+  const addGroup = () => {
+    setPlannerGroups((prev) => {
+      const nextId = (prev[prev.length - 1]?.id ?? 0) + 1;
+      const next = [...prev, { id: nextId, name: `Group ${nextId}`, courseOptions: {} }];
+      setActiveGroupId(nextId);
       return next;
     });
   };
 
-  const handleGenerate = useCallback(() => {
-    const groups = Object.values(selectedGroups);
-    if (groups.length === 0) return;
+  const removeGroup = (groupId) => {
+    setPlannerGroups((prev) => {
+      const next = prev.filter((g) => g.id !== groupId);
+      if (next.length === 0) {
+        setActiveGroupId(1);
+        return [{ id: 1, name: "Group 1", courseOptions: {} }];
+      }
+      if (!next.some((g) => g.id === activeGroupId)) {
+        setActiveGroupId(next[0].id);
+      }
+      return next;
+    });
+  };
+
+  const addSelectedToActiveGroup = () => {
+    const selectedKeys = Object.keys(selectedSearchKeys);
+    if (selectedKeys.length === 0) return;
+
+    const groupMap = Object.fromEntries(groupedResults.map((g) => [g.courseCode, g.sections]));
+    setPlannerGroups((prev) =>
+      prev.map((group) => {
+        if (group.id !== activeGroupId) return group;
+        const nextOptions = { ...group.courseOptions };
+        selectedKeys.forEach((key) => {
+          const sections = groupMap[key];
+          if (sections?.length) nextOptions[key] = sections;
+        });
+        return { ...group, courseOptions: nextOptions };
+      })
+    );
+    setSelectedSearchKeys({});
+  };
+
+  const removeCourseFromGroup = (groupId, courseKey) => {
+    setPlannerGroups((prev) =>
+      prev.map((group) => {
+        if (group.id !== groupId) return group;
+        const nextOptions = { ...group.courseOptions };
+        delete nextOptions[courseKey];
+        return { ...group, courseOptions: nextOptions };
+      })
+    );
+  };
+
+  const handleGenerate = useCallback(async () => {
+    const configuredGroups = plannerGroups.filter(
+      (group) => Object.keys(group.courseOptions).length > 0
+    );
+    if (configuredGroups.length === 0) return;
+
+    const optionSets = configuredGroups.map((group) =>
+      Object.entries(group.courseOptions)
+        .map(([courseKey, sections]) => {
+          const identifier = parseCourseIdentifier(sections[0]);
+          if (!identifier) return null;
+          return { ...identifier, courseKey, groupId: group.id };
+        })
+        .filter(Boolean)
+    );
+    if (optionSets.some((set) => set.length === 0)) return;
+
+    const combinations = cartesianProduct(optionSets).slice(0, MAX_COMBINATIONS);
+    if (combinations.length === 0) return;
+
     setGenerating(true);
+    try {
+      const constraints = buildConstraints(preferNoFriday, preferNoMorning);
+      const mergedPlans = [];
+      const seenSchedules = new Set();
 
-    setTimeout(() => {
-      const combos = cartesianProduct(groups);
-      let valid = [];
-      for (const combo of combos) {
-        if (valid.length >= MAX_PLANS) break;
-        if (!comboHasConflict(combo)) valid.push(combo);
+      for (const combination of combinations) {
+        if (mergedPlans.length >= MAX_PLANS) break;
+        const response = await fetch("/api/generator/generate-schedules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            courses: combination.map(({ subject, course_number }) => ({
+              subject,
+              course_number,
+            })),
+            days: constraints.days,
+            startTime: constraints.startTime,
+          }),
+        });
+        if (!response.ok) continue;
+        const data = await response.json();
+        const hydrated = hydrateSchedules(data.schedules, plannerGroups);
+        for (const schedule of hydrated) {
+          const signature = schedule
+            .map((c) => String(c.crn || c.courseId || c.courseCode))
+            .sort()
+            .join("|");
+          if (seenSchedules.has(signature)) continue;
+          seenSchedules.add(signature);
+          mergedPlans.push(schedule);
+          if (mergedPlans.length >= MAX_PLANS) break;
+        }
       }
-
-      if (preferNoFriday) {
-        const pref = valid.filter(
-          (c) => !c.some((x) => (x.meetingDays || "").includes("F"))
-        );
-        if (pref.length > 0) valid = pref;
-      }
-
-      if (preferNoMorning) {
-        const pref = valid.filter(
-          (c) =>
-            !c.some((x) => {
-              const r = getTimeRange(x);
-              return r && r.start < 10;
-            })
-        );
-        if (pref.length > 0) valid = pref;
-      }
+      const valid = mergedPlans.slice(0, MAX_PLANS);
 
       setPlans(valid);
       setPageIndex(0);
       setHasGenerated(true);
-      setGenerating(false);
       setCompareSelection([]);
       setShowCompare(false);
       onSavePlans?.(valid);
-    }, 50);
-  }, [selectedGroups, preferNoFriday, preferNoMorning, onSavePlans]);
+    } catch {
+      setPlans([]);
+      setHasGenerated(true);
+      setCompareSelection([]);
+      setShowCompare(false);
+      onSavePlans?.([]);
+    } finally {
+      setGenerating(false);
+    }
+  }, [plannerGroups, preferNoFriday, preferNoMorning, onSavePlans]);
 
   const toggleCompareIndex = useCallback((globalIdx) => {
     setCompareSelection((prev) => {
@@ -230,7 +441,9 @@ export default function QuickPlanner({
   const totalPages = Math.ceil(plans.length / PLANS_PER_PAGE);
   const startIdx = pageIndex * PLANS_PER_PAGE;
   const visiblePlans = plans.slice(startIdx, startIdx + PLANS_PER_PAGE);
-  const selectedCount = Object.keys(selectedGroups).length;
+  const configuredGroupCount = plannerGroups.filter(
+    (group) => Object.keys(group.courseOptions).length > 0
+  ).length;
 
   const handleRegenerate = () => {
     setPageIndex((prev) => (prev + 1 < totalPages ? prev + 1 : 0));
@@ -279,7 +492,7 @@ export default function QuickPlanner({
               1. Select Required Courses
             </h3>
 
-            <div className="flex gap-2 mb-3">
+            <div className="flex flex-wrap gap-2 mb-3">
               <select
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
@@ -294,14 +507,34 @@ export default function QuickPlanner({
                 ))}
               </select>
               <input
-                id="quick-planner-search-input"
+                id="quick-planner-subject-input"
                 type="text"
-                placeholder="Search courses (e.g. CSC, MAT)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Course Subject"
+                value={courseSubject}
+                onChange={(e) => setCourseSubject(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                aria-label="Search courses"
-                className="flex-1 px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+                aria-label="Course subject"
+                className="flex-1 min-w-[9rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+              />
+              <input
+                id="quick-planner-number-input"
+                type="text"
+                placeholder="Course Number"
+                value={courseNumber}
+                onChange={(e) => setCourseNumber(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                aria-label="Course number"
+                className="flex-1 min-w-[9rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+              />
+              <input
+                id="quick-planner-crn-input"
+                type="text"
+                placeholder="CRN"
+                value={crnSearch}
+                onChange={(e) => setCrnSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                aria-label="CRN"
+                className="flex-1 min-w-[8rem] px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
               />
               <button
                 onClick={handleSearch}
@@ -312,6 +545,35 @@ export default function QuickPlanner({
               </button>
             </div>
 
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <select
+                value={activeGroupId}
+                onChange={(e) => setActiveGroupId(Number(e.target.value))}
+                className="px-3 py-2 border border-[#e2e8f0] rounded-md text-sm text-[#334155] bg-white outline-none focus:border-[#0F3B2E] focus:ring-2 focus:ring-[#0F3B2E]/10 transition"
+              >
+                {plannerGroups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={addSelectedToActiveGroup}
+                disabled={Object.keys(selectedSearchKeys).length === 0}
+                className="px-3 py-2 bg-[#1e3a5f] hover:bg-[#152a45] disabled:opacity-40 text-white text-sm font-medium rounded-md transition"
+              >
+                Add selected to {plannerGroups.find((g) => g.id === activeGroupId)?.name || "group"}
+              </button>
+              <button
+                type="button"
+                onClick={addGroup}
+                className="px-3 py-2 border border-[#0F3B2E] text-[#0F3B2E] text-sm font-medium rounded-md hover:bg-[#f0fdf4] transition"
+              >
+                New group
+              </button>
+            </div>
+
             {/* Search results grouped by courseCode */}
             {groupedResults.length > 0 && (
               <div className="border border-[#e2e8f0] rounded-lg max-h-48 overflow-y-auto divide-y divide-[#f1f5f9]">
@@ -319,18 +581,18 @@ export default function QuickPlanner({
                   <label
                     key={g.courseCode}
                     className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-[#f8fafc] transition ${
-                      selectedGroups[g.courseCode] ? "bg-[#f0fdf4]" : ""
+                      selectedSearchKeys[g.courseCode] ? "bg-[#f0fdf4]" : ""
                     }`}
                   >
                     <input
                       type="checkbox"
-                      checked={!!selectedGroups[g.courseCode]}
-                      onChange={() => toggleGroup(g)}
+                      checked={!!selectedSearchKeys[g.courseCode]}
+                      onChange={() => toggleSearchCourse(g)}
                       className="w-4 h-4 accent-[#0F3B2E] flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium text-[#1e293b]">
-                        {g.courseCode}
+                        {g.shortLabel || g.courseCode}
                       </span>
                       <span className="text-sm text-[#64748b] ml-2">
                         {g.name}
@@ -345,29 +607,76 @@ export default function QuickPlanner({
               </div>
             )}
 
-            {/* Selected course tags */}
-            {selectedCount > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {Object.keys(selectedGroups).map((code) => (
+            {/* User-defined groups */}
+            {plannerGroups.length > 0 && (
+              <div className="space-y-2 mt-3">
+                {plannerGroups.map((group) => {
+                  const entries = Object.entries(group.courseOptions);
+                  const isActiveGroup = group.id === activeGroupId;
+                  return (
+                    <div
+                      key={group.id}
+                      onClick={() => setActiveGroupId(group.id)}
+                      className={`border-2 rounded-lg p-3 transition cursor-pointer ${
+                        isActiveGroup
+                          ? "border-[#0F3B2E] bg-[#ecfdf5] shadow-sm"
+                          : "border-[#e2e8f0] bg-[#f8fafc] hover:border-[#94a3b8]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-[#1e293b]">
+                          {group.name} ({entries.length} option{entries.length !== 1 ? "s" : ""})
+                          {isActiveGroup && (
+                            <span className="ml-2 text-xs font-medium text-[#0F3B2E]">
+                              Active
+                            </span>
+                          )}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeGroup(group.id);
+                          }}
+                          className="text-xs text-red-600 hover:text-red-700"
+                        >
+                          X
+                        </button>
+                      </div>
+                      {entries.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {entries.map(([courseKey, sections]) => (
                   <span
-                    key={code}
+                              key={courseKey}
                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0F3B2E] text-white text-xs font-medium rounded-full"
                   >
-                    {code}
+                              {courseKey} ({sections.length})
                     <button
-                      onClick={() => removeGroup(code)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeCourseFromGroup(group.id, courseKey);
+                                }}
                       className="ml-0.5 hover:text-red-200 transition"
                     >
                       ×
                     </button>
                   </span>
                 ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-[#64748b] mt-2">
+                          Add one or more course options to this group.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
           {/* 2. Preferences */}
-          {selectedCount > 0 && (
+          {configuredGroupCount > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-[#1e293b] mb-3">
                 2. Preferences (optional)
@@ -398,7 +707,7 @@ export default function QuickPlanner({
           )}
 
           {/* Generate button */}
-          {selectedCount > 0 && (
+          {configuredGroupCount > 0 && (
             <button
               onClick={handleGenerate}
               disabled={generating}

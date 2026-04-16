@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import CourseSearch from "../CourseSearch/CourseSearch";
 import WeeklySchedule from "../WeeklySchedule/WeeklySchedule";
-import { detectConflicts } from "../../utils/courseUtils";
+import { detectConflicts, formatMeetingDaysForDisplay } from "../../utils/courseUtils";
 
 const TERM_OPTIONS = [
   { label: "Spring/Summer 2026", value: 202601 },
@@ -249,7 +249,7 @@ export default function AdminOverride({ onClose }) {
                           {course.name}
                         </p>
                         <p className="text-xs text-[#64748b] break-words whitespace-normal">
-                          {course.courseCode} · {course.credits} cr · {course.meetingDays} {course.meetingTime}
+                          {course.courseCode} · {course.credits} cr · {formatMeetingDaysForDisplay(course.meetingDays)} {course.meetingTime}
                         </p>
                       </div>
                       <button

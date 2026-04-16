@@ -4,13 +4,21 @@ import CourseSearch from "../../components/CourseSearch/CourseSearch";
 import WeeklySchedule from "../../components/WeeklySchedule/WeeklySchedule";
 import MySchedule from "../../components/MySchedule/MySchedule";
 import QuickPlanner from "../../components/QuickPlanner/QuickPlanner";
-import AdminOverride from "../../components/AdminOverride/AdminOverride";
 import { detectConflicts } from "../../utils/courseUtils";
 import wayneLogo from "../../assets/images/wayneLogo.png";
 
 function getQuickPlanStorageKey(user) {
   return `quickPlans_${user}`;
 }
+
+function getQuickPlannerStateStorageKey(user) {
+  return `quickPlannerState_${user}`;
+}
+
+const TERM_ID_TO_LABEL = {
+  "202601": "Spring/Summer 2026",
+  "202609": "Fall 2026",
+};
 
 function normalizeCourse(raw) {
   return {
@@ -31,7 +39,7 @@ function HomePage() {
   const [planLoading, setPlanLoading] = useState(false);
   const [showQuickPlanner, setShowQuickPlanner] = useState(false);
   const [savedQuickPlans, setSavedQuickPlans] = useState([]);
-  const [showAdminOverride, setShowAdminOverride] = useState(false);
+  const [savedQuickPlannerState, setSavedQuickPlannerState] = useState(null);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerStatus, setRegisterStatus] = useState("");
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -44,8 +52,6 @@ function HomePage() {
   const navigate = useNavigate();
 
   const username = localStorage.getItem("username") || "";
-  const userRole = localStorage.getItem("userRole") || "";
-  const isAdmin = userRole === "admin";
 
   useEffect(() => {
     if (localStorage.getItem("userRole") === "admin") {
@@ -60,6 +66,20 @@ function HomePage() {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setSavedQuickPlans(parsed);
+        }
+      }
+    } catch {
+      /* ignore corrupt data */
+    }
+  }, [username]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(getQuickPlannerStateStorageKey(username));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          setSavedQuickPlannerState(parsed);
         }
       }
     } catch {
@@ -86,6 +106,22 @@ function HomePage() {
   }, [username]);
 
   const conflicts = useMemo(() => detectConflicts(registered), [registered]);
+
+  const scheduleTerm = useMemo(() => {
+    if (registered.length === 0) return "";
+    const terms = new Set(registered.map((c) => c.term).filter(Boolean));
+    if (terms.size === 1) {
+      const termId = [...terms][0];
+      return TERM_ID_TO_LABEL[termId] || "";
+    }
+    return "";
+  }, [registered]);
+
+  const hasMixedTerms = useMemo(() => {
+    if (registered.length <= 1) return false;
+    const terms = new Set(registered.map((c) => c.term).filter(Boolean));
+    return terms.size > 1;
+  }, [registered]);
 
   const handleAddCourse = (course) => {
     setRegistered((prev) => [...prev, course]);
@@ -212,6 +248,18 @@ function HomePage() {
     setShowQuickPlanner(false);
   };
 
+  const handleSaveQuickPlannerState = (state) => {
+    setSavedQuickPlannerState(state);
+    try {
+      localStorage.setItem(
+        getQuickPlannerStateStorageKey(username),
+        JSON.stringify(state)
+      );
+    } catch {
+      /* storage full — silent fail */
+    }
+  };
+
   useEffect(() => {
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -272,14 +320,6 @@ function HomePage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {isAdmin && (
-              <button
-                onClick={() => setShowAdminOverride(true)}
-                className="px-3 py-1.5 text-xs font-medium text-white bg-red-700 border border-red-500 rounded-md hover:bg-red-800 transition"
-              >
-                Admin Override
-              </button>
-            )}
             <button
               onClick={() => setShowQuickPlanner(true)}
               className="relative px-3 py-1.5 text-xs font-medium text-white bg-[#2563eb] border border-[#3b82f6] rounded-md hover:bg-[#1d4ed8] transition"
@@ -303,12 +343,15 @@ function HomePage() {
             </button>
             <button
               onClick={handleRegister}
-              disabled={registerLoading || registered.length === 0}
+              disabled={registerLoading || registered.length === 0 || hasMixedTerms}
+              title={hasMixedTerms ? "Cannot register courses from different semesters" : ""}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition border ${
                 registerStatus === "registered"
                   ? "bg-green-600 border-green-500 text-white"
                   : registerStatus === "error"
                   ? "bg-red-600 border-red-500 text-white"
+                  : hasMixedTerms
+                  ? "bg-gray-400 border-gray-300 text-white cursor-not-allowed"
                   : "bg-[#b45309] border-[#d97706] text-white hover:bg-[#92400e] disabled:opacity-40"
               }`}
             >
@@ -318,6 +361,8 @@ function HomePage() {
                 ? "Registered!"
                 : registerStatus === "error"
                 ? "Failed"
+                : hasMixedTerms
+                ? "Mixed Terms"
                 : "Register"}
             </button>
           </div>
@@ -478,6 +523,7 @@ function HomePage() {
             onAddCourse={handleAddCourse}
             onRemoveCourse={handleRemoveCourse}
             conflicts={conflicts}
+            scheduleTerm={scheduleTerm}
           />
         </div>
 
@@ -502,12 +548,11 @@ function HomePage() {
           onApplyPlan={handleApplyQuickPlan}
           savedPlans={savedQuickPlans}
           onSavePlans={handleSaveQuickPlans}
+          savedPlannerState={savedQuickPlannerState}
+          onSavePlannerState={handleSaveQuickPlannerState}
         />
       )}
 
-      {showAdminOverride && (
-        <AdminOverride onClose={() => setShowAdminOverride(false)} />
-      )}
     </div>
   );
 }

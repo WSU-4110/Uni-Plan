@@ -4,6 +4,7 @@ import {
   addMinutes,
   estimateDuration,
   timeToFloat,
+  formatMeetingDaysForDisplay,
 } from "../../utils/courseUtils";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -24,13 +25,6 @@ const COLORS = [
   "#7c3aed",
 ];
 
-function hashCrn(crn) {
-  const s = String(crn ?? "");
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
-}
-
 function formatDisplayTime(time24) {
   const [h, m] = time24.split(":").map(Number);
   const period = h >= 12 ? "PM" : "AM";
@@ -42,11 +36,29 @@ const SLOT_PX = 28;
 
 function MiniWeekGrid({ plan, accentClass }) {
   const timeLabels = [];
-  for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
+  for (let hour = START_HOUR; hour < END_HOUR; hour++) {
     const period = hour >= 12 ? "PM" : "AM";
     const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
     timeLabels.push(`${display}:00 ${period}`);
   }
+
+  const colorByCourseKey = (() => {
+    const keys = Array.from(
+      new Set(
+        plan.map((course) =>
+          String(course.courseCode || course.crn || course.name || "").trim()
+        )
+      )
+    )
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+    const map = new Map();
+    keys.forEach((key, index) => {
+      map.set(key, COLORS[index % COLORS.length]);
+    });
+    return map;
+  })();
 
   const getCourseBlocks = (day) => {
     return plan
@@ -55,22 +67,45 @@ function MiniWeekGrid({ plan, accentClass }) {
         return days.includes(day);
       })
       .map((course) => {
-        const start24 = parseTo24h(course.meetingTime);
-        const duration = estimateDuration(course.meetingDays);
-        const end24 = addMinutes(start24, duration);
+        const timeStr = (course.meetingTime || "").trim();
+        if (!timeStr || timeStr === "TBA") return null;
+
+        let start24;
+        let end24;
+
+        const parts = timeStr.split(" - ");
+        if (parts.length === 2) {
+          start24 = parseTo24h(parts[0].trim());
+          end24 = parseTo24h(parts[1].trim());
+        } else {
+          start24 = parseTo24h(timeStr);
+          const duration = estimateDuration(course.meetingDays);
+          end24 = addMinutes(start24, duration);
+        }
+
         const startFloat = timeToFloat(start24);
         const endFloat = timeToFloat(end24);
+        if (
+          Number.isNaN(startFloat) ||
+          Number.isNaN(endFloat) ||
+          endFloat <= startFloat
+        ) {
+          return null;
+        }
+
         const top = ((startFloat - START_HOUR) / HOURS_RANGE) * 100;
         const height = ((endFloat - startFloat) / HOURS_RANGE) * 100;
-        const colorIndex = hashCrn(course.crn) % COLORS.length;
+        const courseKey = String(course.courseCode || course.crn || course.name || "").trim();
+        const color = colorByCourseKey.get(courseKey) || COLORS[0];
         return {
           course,
           top,
           height,
-          color: COLORS[colorIndex],
+          color,
           start24,
         };
-      });
+      })
+      .filter(Boolean);
   };
 
   return (
@@ -173,7 +208,7 @@ function PlanColumn({
             >
               <span className="font-bold text-[#0f172a]">{c.courseCode}</span>
               <span className="text-[#334155]">
-                {c.meetingDays} {c.meetingTime}
+                {formatMeetingDaysForDisplay(c.meetingDays)} {c.meetingTime}
               </span>
               {c.instructor && (
                 <span className="text-xs text-[#64748b] w-full sm:w-auto truncate">

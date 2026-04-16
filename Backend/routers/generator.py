@@ -46,8 +46,9 @@ def build_schedules(course_sections, index, current, results, limit=100):
             current.pop()
 
 def violates_constraints(time_slot, blocked_days, startTime):
+    start_min = time_slot.get("start_min")
     return (
-        (time_slot["start_min"] > startTime) or
+        (start_min is not None and start_min < startTime) or
         (time_slot["monday"] and "monday" in blocked_days) or
         (time_slot["tuesday"] and "tuesday" in blocked_days) or
         (time_slot["wednesday"] and "wednesday" in blocked_days) or

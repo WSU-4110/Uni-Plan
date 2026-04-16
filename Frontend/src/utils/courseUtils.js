@@ -19,6 +19,30 @@ export function parseMeetingDays(meetingDaysStr) {
 }
 
 /**
+ * UI display helper: keep internal day code as "R" but show Thursday as "TR".
+ */
+export function formatMeetingDaysForDisplay(meetingDaysStr) {
+  if (!meetingDaysStr) return "";
+  const normalized = String(meetingDaysStr).trim();
+  if (!normalized) return "";
+  // Only convert compact day-code strings like "MWF" or "TR".
+  if (!/^[MTWRF]+$/.test(normalized)) return normalized;
+
+  const displayMap = {
+    M: "M",
+    T: "TU",
+    W: "W",
+    R: "TR",
+    F: "F",
+  };
+
+  return normalized
+    .split("")
+    .map((ch) => displayMap[ch] || ch)
+    .join(" ");
+}
+
+/**
  * Convert 12h time string to 24h "HH:MM" format
  * e.g. "10:00 AM" → "10:00", "2:00 PM" → "14:00"
  */

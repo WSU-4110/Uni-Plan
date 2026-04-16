@@ -2,7 +2,7 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import {
     parseMeetingDays, parseTo24h, addMinutes,
-    estimateDuration, timeToFloat,
+    estimateDuration, timeToFloat, formatMeetingDaysForDisplay,
 } from "../../utils/courseUtils";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -16,8 +16,9 @@ const COLORS = [
 ];
 
 function hashCrn(crn) {
+    const s = String(crn ?? "");
     let h = 0;
-    for (let i = 0; i < crn.length; i++) h = (h * 31 + crn.charCodeAt(i)) >>> 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
     return h;
 }
 
@@ -49,6 +50,114 @@ export default function ExportButton({ registered, conflicts = new Set() }) {
         const TIME_COL_W = 44;
         const GRID_HEADER_H = 24;
         const totalCredits = registered.reduce((s, c) => s + (c.credits || 0), 0);
+
+        const getCourseBlocks = (day) => {
+            const rawBlocks = registered
+                .filter((course) => {
+                    const parsed = parseMeetingDays(course.meetingDays || course.days || "");
+                    return parsed.includes(day);
+                })
+                .map((course) => {
+                    let startFloat;
+                    let endFloat;
+                    let start24;
+
+                    const timeStr = (course.meetingTime || course.time || "").trim();
+                    if (!timeStr || timeStr === "TBA") return null;
+
+                    const parts = timeStr.split(" - ");
+                    if (parts.length === 2) {
+                        start24 = parseTo24h(parts[0].trim());
+                        const end24 = parseTo24h(parts[1].trim());
+                        startFloat = timeToFloat(start24);
+                        endFloat = timeToFloat(end24);
+                    } else {
+                        start24 = parseTo24h(timeStr);
+                        startFloat = timeToFloat(start24);
+                        if (Number.isNaN(startFloat)) return null;
+                        const durationHours = estimateDuration(course.meetingDays || course.days || "") / 60;
+                        endFloat = startFloat + durationHours;
+                    }
+
+                    if (
+                        Number.isNaN(startFloat) ||
+                        Number.isNaN(endFloat) ||
+                        endFloat <= startFloat
+                    ) {
+                        return null;
+                    }
+
+                    const top = ((startFloat - START_HOUR) / HOURS_RANGE) * 100;
+                    const height = ((endFloat - startFloat) / HOURS_RANGE) * 100;
+                    const color = conflicts.has(course.crn)
+                        ? "#dc2626"
+                        : COLORS[hashCrn(course.crn || course.courseCode || course.name) % COLORS.length];
+                    const location = [course.building, course.room].filter(Boolean).join(" ");
+
+                    return {
+                        course,
+                        top,
+                        height,
+                        startFloat,
+                        endFloat,
+                        color,
+                        start24,
+                        location,
+                    };
+                })
+                .filter(Boolean);
+
+            const sortedBlocks = [...rawBlocks].sort(
+                (a, b) => a.startFloat - b.startFloat || a.endFloat - b.endFloat
+            );
+
+            const layoutGroup = (group) => {
+                const active = [];
+                const placed = [];
+                let maxColumns = 0;
+
+                group.forEach((block) => {
+                    for (let i = active.length - 1; i >= 0; i--) {
+                        if (active[i].endFloat <= block.startFloat) active.splice(i, 1);
+                    }
+
+                    const used = new Set(active.map((item) => item.columnIndex));
+                    let columnIndex = 0;
+                    while (used.has(columnIndex)) columnIndex += 1;
+
+                    active.push({ endFloat: block.endFloat, columnIndex });
+                    maxColumns = Math.max(maxColumns, columnIndex + 1);
+                    placed.push({ ...block, columnIndex });
+                });
+
+                return placed.map((block) => ({ ...block, overlapColumns: maxColumns }));
+            };
+
+            const laidOut = [];
+            let group = [];
+            let groupEnd = -Infinity;
+
+            sortedBlocks.forEach((block) => {
+                if (!group.length) {
+                    group = [block];
+                    groupEnd = block.endFloat;
+                    return;
+                }
+
+                if (block.startFloat < groupEnd) {
+                    group.push(block);
+                    groupEnd = Math.max(groupEnd, block.endFloat);
+                    return;
+                }
+
+                laidOut.push(...layoutGroup(group));
+                group = [block];
+                groupEnd = block.endFloat;
+            });
+
+            if (group.length) laidOut.push(...layoutGroup(group));
+            return laidOut;
+        };
 
         const container = el("div", {
             position: "absolute", top: "-9999px", left: "-9999px",
@@ -125,7 +234,7 @@ export default function ExportButton({ registered, conflicts = new Set() }) {
             }, course.name));
             item.appendChild(el("div", {
                 fontSize: "8px", color: "#64748b", marginTop: "2px",
-            }, `${course.credits} cr · ${course.meetingDays} ${course.meetingTime}${location ? ` · ${location}` : ""}`));
+            }, `${course.credits} cr · ${formatMeetingDaysForDisplay(course.meetingDays)} ${course.meetingTime}${location ? ` · ${location}` : ""}`));
             courseList.appendChild(item);
         });
         leftPanel.appendChild(courseList);
@@ -210,21 +319,14 @@ export default function ExportButton({ registered, conflicts = new Set() }) {
                 }));
             }
 
-            registered.forEach((course) => {
-                if (!parseMeetingDays(course.meetingDays).includes(day)) return;
-
-                const start24 = parseTo24h(course.meetingTime);
-                const end24 = addMinutes(start24, estimateDuration(course.meetingDays));
-                const top = ((timeToFloat(start24) - START_HOUR) / HOURS_RANGE) * 100;
-                const height = Math.max(((timeToFloat(end24) - timeToFloat(start24)) / HOURS_RANGE) * 100, 3);
-                const color = conflicts.has(course.crn)
-                    ? "#dc2626"
-                    : COLORS[hashCrn(course.crn) % COLORS.length];
-                const location = [course.building, course.room].filter(Boolean).join(" ");
-
+            const blocks = getCourseBlocks(day);
+            blocks.forEach(({ course, top, height, color, start24, location, columnIndex, overlapColumns }) => {
                 const block = el("div", {
-                    position: "absolute", left: "1px", right: "1px",
-                    top: `${top}%`, height: `${height}%`,
+                    position: "absolute",
+                    top: `${top}%`,
+                    height: `${Math.max(height, 3)}%`,
+                    left: `calc(${(columnIndex * 100) / overlapColumns}% + 1px)`,
+                    width: `calc(${100 / overlapColumns}% - 2px)`,
                     backgroundColor: color, borderRadius: "3px",
                     overflow: "hidden", padding: "2px 3px", boxSizing: "border-box",
                 });
