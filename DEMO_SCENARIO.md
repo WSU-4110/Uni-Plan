@@ -232,33 +232,63 @@ https://github.com/user-attachments/assets/2f0270a2-b7b7-4521-ba0e-3cc6fb4d9054
 
 | # | Feature | Covered In |
 |---|---------|-----------|
+| | **Authentication & Routing** | |
 | 1 | Student login / role-based routing | Part 1 |
-| 2 | Auto-load registered schedule | Part 1 (step 3) |
-| 3 | Course search with term selection | Part 2 |
-| 4 | Filtering (days, credits, instructor) | Part 2 |
-| 5 | Sorting & pagination | Part 2 |
-| 6 | Available seats display | Part 2 (step 5) |
-| 7 | Course details modal | Part 2 (step 11) |
-| 8 | Add/remove courses | Part 3 |
-| 9 | My Schedule with credit badge | Part 3 |
-| 10 | Weekly Schedule grid rendering | Part 3 |
-| 11 | Time conflict detection & highlighting | Part 3 (step 15) |
-| 12 | Conflict banner | Part 3 (step 15) |
-| 13 | 18-credit limit enforcement (student) | Part 3 (step 16) |
-| 14 | Save plan | Part 4 |
-| 15 | Load plan | Part 4 |
-| 16 | Register courses | Part 5 |
-| 17 | Quick Planner: course groups | Part 6 (step 25) |
-| 18 | Quick Planner: preferences (Friday off, no morning) | Part 6 (step 26) |
-| 19 | Quick Planner: generate schedules | Part 6 (step 27) |
-| 20 | Quick Planner: pagination & regenerate | Part 6 (steps 28–29) |
-| 21 | Quick Planner: compare plans side-by-side | Part 6 (step 30) |
-| 22 | Quick Planner: apply plan | Part 6 (step 31) |
-| 23 | PDF export | Part 7 |
-| 24 | Admin login / admin mode | Part 8 (steps 36–37) |
-| 25 | Admin: search student & load registered schedule | Part 8 (steps 38–40) |
-| 26 | Admin: bypass credit limit (override) | Part 8 (step 41) |
-| 27 | Admin: force save registered schedule | Part 8 (step 42) |
-| 28 | Student sees admin-overridden schedule (>18 credits) | Part 9 |
-| 29 | Auth guard (redirect unauthenticated users) | Part 10 (step 53) |
-| 30 | Logout | Part 10 |
+| 2 | Student/Admin mode toggle on login page | Part 1 (step 1), Part 8 (step 36) |
+| 3 | Login error handling (wrong password, role mismatch) | Part 1, Part 8 |
+| 4 | Session persistence in localStorage | Part 1 (step 3), Part 9 (step 48) |
+| 5 | Auth guard (redirect unauthenticated users) | Part 10 (step 53) |
+| 6 | Role-based access control (student ↔ admin isolation) | Part 10 (step 53) |
+| 7 | Logout | Part 10 |
+| | **Course Search & Filtering** | |
+| 8 | Course search with term selection | Part 2 |
+| 9 | Multi-filter: days, credits, instructor | Part 2 (steps 6–8) |
+| 10 | Sorting (by credits, subject, etc.) | Part 2 (step 9) |
+| 11 | Pagination | Part 2 (step 10) |
+| 12 | Available seats badge on course cards | Part 2 (step 5) |
+| 13 | Course details modal (full info view) | Part 2 (step 11) |
+| | **Schedule Building** | |
+| 14 | Add/remove courses | Part 3 (steps 13, 17) |
+| 15 | Auto-load registered schedule on login | Part 1 (step 3) |
+| 16 | My Schedule panel with dynamic credit badge | Part 3 (step 14) |
+| 17 | Weekly Schedule grid rendering (Mon–Fri, 8 AM–8 PM) | Part 3 (step 14) |
+| 18 | Color-coded course blocks (unique color per CRN) | Part 3 (step 14) |
+| 19 | Course block hover tooltip (name, time, location, conflict) | Part 3 |
+| 20 | Overlapping course side-by-side column layout | Part 3 (step 15) |
+| 21 | Time conflict detection & red highlighting | Part 3 (step 15) |
+| 22 | Conflict warning toast on add | Part 3 (step 15) |
+| 23 | Conflict banner on Weekly Schedule | Part 3 (step 15) |
+| 24 | 18-credit limit enforcement (student) | Part 3 (step 16) |
+| 25 | Credit badge color change (green → red at cap) | Part 3 (step 16) |
+| 26 | Weekly Schedule footer credit total with color indicator | Part 3 |
+| | **Plan Management** | |
+| 27 | Save plan (with plan name + term ID) | Part 4 (step 18) |
+| 28 | Load plan from saved plan list | Part 4 (step 20) |
+| 29 | Saved plan list with metadata (course count, term) | Part 4 (step 20) |
+| 30 | Register courses (persist to server) | Part 5 (step 21) |
+| | **Quick Planner** | |
+| 31 | Quick Planner: group selection (courses grouped by code) | Part 6 (step 25) |
+| 32 | Quick Planner: multi-group cartesian product generation | Part 6 (step 27) |
+| 33 | Quick Planner: conflict-free schedule filtering | Part 6 (step 27) |
+| 34 | Quick Planner: preferences (Friday off, no morning) | Part 6 (step 26) |
+| 35 | Quick Planner: pagination & regenerate | Part 6 (steps 28–29) |
+| 36 | Quick Planner: compare plans side-by-side | Part 6 (step 30) |
+| 37 | Quick Planner: apply plan to main schedule | Part 6 (step 31) |
+| 38 | Quick Planner: saved plans in localStorage | Part 6 |
+| | **Export** | |
+| 39 | PDF export (weekly grid + course list + credits) | Part 7 (step 33) |
+| | **Admin** | |
+| 40 | Admin login / admin mode | Part 8 (steps 36–37) |
+| 41 | Admin: search student by ID | Part 8 (step 38) |
+| 42 | Admin: load student's registered schedule | Part 8 (steps 39–40) |
+| 43 | Admin: view student's saved plan list | Part 8 |
+| 44 | Admin: bypass 18-credit limit (override) | Part 8 (step 41) |
+| 45 | Admin: override credit display with label + red styling | Part 8 (step 41) |
+| 46 | Admin: force save registered schedule | Part 8 (step 42) |
+| 47 | Student sees admin-overridden schedule (>18 credits) | Part 9 (step 49) |
+| 48 | Data persistence across page refresh | Part 9 (step 48) |
+| | **UX & Accessibility** | |
+| 49 | Error/warning toast with auto-dismiss animation | Part 3 (step 15–16) |
+| 50 | Keyboard accessibility (Escape close, focus trap, Tab cycle) | All modals |
+| 51 | ARIA attributes (roles, labels, live regions) | All modals |
+| 52 | Wayne State university branding (logo, colors) | All pages |
