@@ -157,6 +157,15 @@ export default function QuickPlanner({
   savedPlannerState,
   onSavePlannerState,
 }) {
+  const onCloseRef = useRef(onClose);
+  const onSavePlannerStateRef = useRef(onSavePlannerState);
+  const onSavePlansRef = useRef(onSavePlans);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    onSavePlannerStateRef.current = onSavePlannerState;
+    onSavePlansRef.current = onSavePlans;
+  });
+
   const [courseSubject, setCourseSubject] = useState("");
   const [courseNumber, setCourseNumber] = useState("");
   const [crnSearch, setCrnSearch] = useState("");
@@ -197,13 +206,13 @@ export default function QuickPlanner({
   }, [plannerGroups, activeGroupId]);
 
   useEffect(() => {
-    onSavePlannerState?.({
+    onSavePlannerStateRef.current?.({
       plannerGroups,
       activeGroupId,
       preferNoFriday,
       preferNoMorning,
     });
-  }, [plannerGroups, activeGroupId, preferNoFriday, preferNoMorning, onSavePlannerState]);
+  }, [plannerGroups, activeGroupId, preferNoFriday, preferNoMorning]);
 
   useEffect(() => {
     const modalEl = quickPlannerModalRef.current;
@@ -218,7 +227,7 @@ export default function QuickPlanner({
 
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
-        onClose?.();
+        onCloseRef.current?.();
         return;
       }
       if (e.key === "Tab" && first && last) {
@@ -234,7 +243,7 @@ export default function QuickPlanner({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, []);
 
   const handleSearch = async () => {
     setSearchLoading(true);
@@ -414,17 +423,17 @@ export default function QuickPlanner({
       setHasGenerated(true);
       setCompareSelection([]);
       setShowCompare(false);
-      onSavePlans?.(valid);
+      onSavePlansRef.current?.(valid);
     } catch {
       setPlans([]);
       setHasGenerated(true);
       setCompareSelection([]);
       setShowCompare(false);
-      onSavePlans?.([]);
+      onSavePlansRef.current?.([]);
     } finally {
       setGenerating(false);
     }
-  }, [plannerGroups, preferNoFriday, preferNoMorning, onSavePlans]);
+  }, [plannerGroups, preferNoFriday, preferNoMorning]);
 
   const toggleCompareIndex = useCallback((globalIdx) => {
     setCompareSelection((prev) => {

@@ -325,9 +325,6 @@ function HomePage() {
               className="relative px-3 py-1.5 text-xs font-medium text-white bg-[#2563eb] border border-[#3b82f6] rounded-md hover:bg-[#1d4ed8] transition"
             >
               Quick Planner
-              {savedQuickPlans.length > 0 && !showQuickPlanner && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full border border-white" />
-              )}
             </button>
             <button
               onClick={openLoadModal}

@@ -1,21 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function ErrorMessage({ message, onClose, type = "error" }) {
   const [visible, setVisible] = useState(false);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
 
   useEffect(() => {
     if (!message) {
-      queueMicrotask(() => setVisible(false));
+      setVisible(false);
       return;
     }
-    queueMicrotask(() => setVisible(true));
+    setVisible(true);
     const hide = setTimeout(() => setVisible(false), 4700);
-    const close = setTimeout(() => onClose?.(), 5000);
+    const close = setTimeout(() => onCloseRef.current?.(), 5000);
     return () => {
       clearTimeout(hide);
       clearTimeout(close);
     };
-  }, [message, onClose]);
+  }, [message]);
 
   if (!message) return null;
 

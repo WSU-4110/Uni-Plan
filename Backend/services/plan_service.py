@@ -2,6 +2,12 @@ from fastapi import HTTPException
 from Backend.db import get_conn
 from Backend.routers.courses import days_str, format_location, format_time_range
 
+def normalize_seats(max_reg, registered):
+    max_seats = max(max_reg or 0, 0)
+    registered_seats = max(registered or 0, 0)
+    available_seats = max(max_seats - registered_seats, 0)
+    return max_seats, registered_seats, available_seats
+
 def save_courses_to_plan(course_ids, user, term, name):
 
     conn = get_conn()
@@ -80,8 +86,9 @@ def load_courses_from_plan(user: str, term: int, name: str):
     results = []
 
     for r in rows:
-        max_seats = r["max_reg"] or 0
-        registered_seats = r["registered"] or 0
+        max_seats, registered_seats, available_seats = normalize_seats(
+            r["max_reg"], r["registered"]
+        )
 
         results.append(
             {
@@ -115,7 +122,7 @@ def load_courses_from_plan(user: str, term: int, name: str):
 
                 "maxSeats": max_seats,
                 "registeredSeats": registered_seats,
-                "availableSeats": max_seats - registered_seats,
+                "availableSeats": available_seats,
             }
         )
 
@@ -188,7 +195,7 @@ def register_courses(user: str, course_ids: list[int]):
 
         if to_decrement:
             cur.execute(
-                "UPDATE section SET registered = registered - 1 WHERE course_id = ANY(%s)",
+                "UPDATE section SET registered = GREATEST(registered - 1, 0) WHERE course_id = ANY(%s)",
                 (list(to_decrement),),
             )
 
@@ -252,8 +259,9 @@ def load_registered_courses(user: str):
 
     results = []
     for r in rows:
-        max_seats = r["max_reg"] or 0
-        registered_seats = r["registered"] or 0
+        max_seats, registered_seats, available_seats = normalize_seats(
+            r["max_reg"], r["registered"]
+        )
         results.append({
             "courseId": r["course_id"],
             "subject": r["subject"],
@@ -280,7 +288,7 @@ def load_registered_courses(user: str):
             "friday": r["friday"],
             "maxSeats": max_seats,
             "registeredSeats": registered_seats,
-            "availableSeats": max_seats - registered_seats,
+            "availableSeats": available_seats,
         })
     return {"results": results}
 

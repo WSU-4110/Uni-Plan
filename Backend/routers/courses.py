@@ -104,8 +104,9 @@ def search_courses(
 
     results = []
     for r in rows:
-        max_seats = r["max_reg"] or 0
-        registered_seats = r["registered"] or 0
+        max_seats = max(r["max_reg"] or 0, 0)
+        registered_seats = max(r["registered"] or 0, 0)
+        available_seats = max(max_seats - registered_seats, 0)
 
         results.append(
             {
@@ -123,7 +124,7 @@ def search_courses(
                 "location": format_location(r),
                 "maxSeats": max_seats,
                 "registeredSeats": registered_seats,
-                "availableSeats": max_seats - registered_seats,
+                "availableSeats": available_seats,
             }
         )
 
