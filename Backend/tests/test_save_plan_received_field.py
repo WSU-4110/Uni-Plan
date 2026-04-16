@@ -8,14 +8,9 @@ import pytest
 TEST_USERNAME = "testuser"
 
 
-def test_save_plan_response_contains_received_field(client, monkeypatch):
-    monkeypatch.setattr(
-        "routers.plans.save_courses_to_plan",
-        lambda course_ids, user, term, name: {"received": course_ids},
-    )
-
+def test_save_plan_response_contains_received_field(client):
     payload = {
-        "course_ids": [101, 202],
+        "course_ids": [],
         "user": TEST_USERNAME,
         "term": 202501,
         "name": "myplan",

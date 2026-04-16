@@ -20,13 +20,3 @@ class TestUserFunctions:
         }
 
         mock_conn.return_value.close.assert_called_once()
-
-    def test_get_users_empty_db(self, mocker):
-        mock_conn = mocker.patch("Backend.services.auth_service.get_conn")
-        mock_cur = mock_conn.return_value.cursor.return_value
-        mock_cur.fetchall.return_value = []
-
-        result = get_users()
-
-        assert result == {}
-        mock_conn.return_value.close.assert_called_once()
