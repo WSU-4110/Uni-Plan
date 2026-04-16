@@ -151,6 +151,53 @@ def register_courses(user: str, course_ids: list[int]):
     conn = get_conn()
     try:
         cur = conn.cursor()
+
+        cur.execute(
+            "SELECT course_id FROM plan WHERE student_id = %s AND name = %s",
+            (user, REGISTERED_PLAN_NAME),
+        )
+        old_ids = [r["course_id"] for r in cur.fetchall()]
+
+        new_set = set(course_ids)
+        old_set = set(old_ids)
+        to_decrement = old_set - new_set
+        to_increment = new_set - old_set
+
+        if to_increment:
+            cur.execute(
+                """
+                SELECT course_id, max_reg, registered
+                FROM section
+                WHERE course_id = ANY(%s)
+                FOR UPDATE
+                """,
+                (list(to_increment),),
+            )
+            seat_rows = cur.fetchall()
+            full_courses = []
+            for sr in seat_rows:
+                avail = (sr["max_reg"] or 0) - (sr["registered"] or 0)
+                if avail <= 0:
+                    full_courses.append(sr["course_id"])
+            if full_courses:
+                conn.rollback()
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"No seats available for course(s): {full_courses}",
+                )
+
+        if to_decrement:
+            cur.execute(
+                "UPDATE section SET registered = registered - 1 WHERE course_id = ANY(%s)",
+                (list(to_decrement),),
+            )
+
+        if to_increment:
+            cur.execute(
+                "UPDATE section SET registered = registered + 1 WHERE course_id = ANY(%s)",
+                (list(to_increment),),
+            )
+
         cur.execute(
             "DELETE FROM plan WHERE student_id = %s AND name = %s",
             (user, REGISTERED_PLAN_NAME),
@@ -162,6 +209,8 @@ def register_courses(user: str, course_ids: list[int]):
                 (user, cid, REGISTERED_PLAN_NAME),
             )
         conn.commit()
+    except HTTPException:
+        raise
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to register: {e}")
